@@ -1,1 +1,3 @@
 # TargetedNakomoto
+
+Add notes here
