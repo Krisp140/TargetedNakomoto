@@ -54,28 +54,26 @@ class Blockchain:
     
     def adjust_hashrate(self, hashrate, epoch_idx, e_current, P_current, efficiency_current, electricity_cost_current):
         alpha1 = 10.9076
-        alpha6 = 0.0130
-        alpha7 = 0.6412
-        alpha8 = -3.9930
+        alpha2 = 0.0130
+        alpha3 = 0.6412
+        alpha4 = -3.9930
 
         epoch = self.epochs[epoch_idx]
-        log_eP_current = np.log(1+ (e_current * P_current))  # avoid log(0)
-
+        log_eP_current = np.log(1+ (e_current * P_current)) 
         log_eff_current = np.log(1+efficiency_current)
         log_electricity_cost_current = np.log(1+electricity_cost_current)
         # Put it all together:
-        # bN_{t+1} = α1 + α2*log(eP_t) + α3*log(1+∆T_t) - α4*log(c_t) + α5*log(eP_{t-1})
+        # bN_{t+1} = α1 + α2*log(eP_t) + + α3*log(efficiency_t) + α4*log(c_t)
         predicted_log_hashrate = (
             alpha1 
-            + alpha6 * log_eP_current
-            + alpha7 * log_eff_current
-            + alpha8 * log_electricity_cost_current
+            + alpha2 * log_eP_current
+            + alpha3 * log_eff_current
+            + alpha4 * log_electricity_cost_current
         )
 
         # Exponentiate to get N_{t+1}
         new_hashrate = np.exp(predicted_log_hashrate)      
         epoch.add_hashrate(new_hashrate)
-        print(f"Updateing Hashrate from {hashrate} to: {new_hashrate}")
         return new_hashrate
     
 
