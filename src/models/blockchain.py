@@ -43,24 +43,32 @@ class Blockchain:
         epoch.add_reward(reward)
         return reward
     
-    def adjust_hashrate(self, hashrate, epoch_idx, e_current, P_current, efficiency_current, electricity_cost_current):
-        alpha1 = 10.9076
-        alpha2 = 0.0130
-        alpha3 = 0.6412
-        alpha4 = -3.9930
+    def adjust_hashrate(self, hashrate, epoch_idx, e_current, P_current, efficiency_current, electricity_cost_current, new=True):
+        alpha1 = 45.6767
+        alpha2 = 0.4108
+        alpha3 = -1.5100
+        alpha4 = 0.2499
+        alpha5 = 0.0346
 
         epoch = self.epochs[epoch_idx]
         log_eP_current = np.log(1+ (e_current * P_current)) 
         log_eff_current = np.log(1+efficiency_current)
         log_electricity_cost_current = np.log(1+electricity_cost_current)
         # Put it all together:
-        # bN_{t+1} = α1 + α2*log(eP_t) + + α3*log(efficiency_t) + α4*log(c_t)
-        predicted_log_hashrate = (
-            alpha1 
-            + alpha2 * log_eP_current
-            + alpha3 * log_eff_current
-            + alpha4 * log_electricity_cost_current
-        )
+        # bN_{t+1} = α1 + α2*log(eP_t) + α3*log(efficiency_t) + α4*log(c_t)
+        if new:
+            predicted_log_hashrate = (
+                alpha1 
+                + alpha2 * log_eP_current
+                + alpha3 * log_eff_current
+            )
+        else:
+            predicted_log_hashrate = (
+                alpha1 
+                + alpha2 * log_eP_current
+                + alpha3 * log_eff_current
+                + alpha4 * log_electricity_cost_current
+            )
 
         # Exponentiate to get N_{t+1}
         new_hashrate = np.exp(predicted_log_hashrate)      
@@ -83,16 +91,16 @@ class Blockchain:
         T_hat = max(T_STAR /4, min(T_n, 4 *T_STAR))
         D_next = D_n * (T_STAR / T_hat)
         new_epoch.difficulty = D_next
-        print("\nNEW EPOCH\n")
-        print(f"Updating difficulty from {D_n} => {D_next}")
-        print("Median Block Reward: " + str(P_B_median) + '\n')
+        #print("\nNEW EPOCH\n")
+        #print(f"Updating difficulty from {D_n} => {D_next}")
+        #print("Median Block Reward: " + str(P_B_median) + '\n')
 
         # Case 1: Hashrate too high - need to decrease rewards
         if self.DT > self.DT_N_UB:
             print("Case 1: Hashrate above upper bound")
             new_epoch.ceil = (self.tau) * P_B_median
             new_epoch.floor = None  # Clear any existing floor
-
+    
         # Case 2 & 4: Hashrate within bounds - gradual adjustment
         elif self.DT_N_LB < self.DT < self.DT_N_UB:
             

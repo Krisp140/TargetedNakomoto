@@ -1,186 +1,38 @@
-Full model:
 Regression Results:
-                            OLS Regression Results                            
+                             OLS Regression Results                             
+================================================================================
+Dep. Variable:     log_hashrate_forward   R-squared:                       0.970
+Model:                              OLS   Adj. R-squared:                  0.970
+Method:                   Least Squares   F-statistic:                     7261.
+Date:                  Mon, 10 Mar 2025   Prob (F-statistic):               0.00
+Time:                          16:11:14   Log-Likelihood:                 963.57
+No. Observations:                   891   AIC:                            -1917.
+Df Residuals:                       886   BIC:                            -1893.
+Df Model:                             4                                         
+Covariance Type:              nonrobust                                         
+==================================================================================================
+                                     coef    std err          t      P>|t|      [0.025      0.975]
+--------------------------------------------------------------------------------------------------
+constant                          44.9623      0.404    111.379      0.000      44.170      45.755
+log_eP_forward                     0.4098      0.010     42.317      0.000       0.391       0.429
+log_efficiency_forward            -1.4882      0.015   -100.872      0.000      -1.517      -1.459
+log_electricity_cost_forward       0.2499      0.095      2.639      0.008       0.064       0.436
+log_block_speed_change_forward     0.0346      0.003     10.881      0.000       0.028       0.041
 ==============================================================================
-Dep. Variable:           log_hashrate   R-squared:                       0.558
-Model:                            OLS   Adj. R-squared:                  0.551
-Method:                 Least Squares   F-statistic:                     74.19
-Date:                Sat, 25 Jan 2025   Prob (F-statistic):           1.66e-59
-Time:                        17:21:30   Log-Likelihood:                 355.80
-No. Observations:                 359   AIC:                            -697.6
-Df Residuals:                     352   BIC:                            -670.4
-Df Model:                           6                                         
-Covariance Type:            nonrobust                                         
-===========================================================================================
-                              coef    std err          t      P>|t|      [0.025      0.975]
--------------------------------------------------------------------------------------------
-constant                   12.8047      0.390     32.805      0.000      12.037      13.572
-log_eP                     -0.1151      0.155     -0.740      0.460      -0.421       0.191
-log_mining_cost            -0.3599      0.875     -0.411      0.681      -2.080       1.361
-log_eP_lag                  0.2156      0.109      1.974      0.049       0.001       0.430
-log_mining_cost_lag         0.2013      0.604      0.333      0.739      -0.986       1.388
-log_eP_forward             -0.0363      0.109     -0.332      0.740      -0.251       0.178
-log_mining_cost_forward    -0.4611      0.601     -0.767      0.444      -1.643       0.721
-==============================================================================
-Omnibus:                        1.847   Durbin-Watson:                   1.834
-Prob(Omnibus):                  0.397   Jarque-Bera (JB):                1.934
-Skew:                          -0.156   Prob(JB):                        0.380
-Kurtosis:                       2.821   Cond. No.                     6.38e+03
+Omnibus:                       25.112   Durbin-Watson:                   0.254
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):               37.104
+Skew:                           0.261   Prob(JB):                     8.77e-09
+Kurtosis:                       3.853   Cond. No.                     2.67e+03
 ==============================================================================
 
 Notes:
 [1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
-[2] The condition number is large, 6.38e+03. This might indicate that there are
+[2] The condition number is large, 2.67e+03. This might indicate that there are
 strong multicollinearity or other numerical problems.
 
 Estimated Alpha Values:
-alpha1: 12.8047
-alpha2: -0.1151
-alpha4: -0.3599
-alpha5: 0.2156
-alpha6: 0.2013
-alpha7: -0.0363
-alpha8: -0.4611
-
-Validation Metrics:
-Mean Squared Error: 3348344179827164.50
-Root Mean Squared Error: 57864878.64
-Mean Absolute Error: 46666489.77
-
-==============================================================================
-==============================================================================
-==============================================================================
-==============================================================================
-
-Model w/ only future
-Regression Results:
-                            OLS Regression Results                            
-==============================================================================
-Dep. Variable:           log_hashrate   R-squared:                       0.552
-Model:                            OLS   Adj. R-squared:                  0.550
-Method:                 Least Squares   F-statistic:                     219.5
-Date:                Sat, 25 Jan 2025   Prob (F-statistic):           7.92e-63
-Time:                        18:35:42   Log-Likelihood:                 353.29
-No. Observations:                 359   AIC:                            -700.6
-Df Residuals:                     356   BIC:                            -688.9
-Df Model:                           2                                         
-Covariance Type:            nonrobust                                         
-===========================================================================================
-                              coef    std err          t      P>|t|      [0.025      0.975]
--------------------------------------------------------------------------------------------
-constant                   12.9042      0.387     33.356      0.000      12.143      13.665
-log_eP_forward              0.0599      0.017      3.577      0.000       0.027       0.093
-log_mining_cost_forward    -0.6155      0.030    -20.742      0.000      -0.674      -0.557
-==============================================================================
-Omnibus:                        2.807   Durbin-Watson:                   1.833
-Prob(Omnibus):                  0.246   Jarque-Bera (JB):                2.774
-Skew:                          -0.170   Prob(JB):                        0.250
-Kurtosis:                       2.736   Cond. No.                     1.33e+03
-==============================================================================
-
-Notes:
-[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
-[2] The condition number is large, 1.33e+03. This might indicate that there are
-strong multicollinearity or other numerical problems.
-
-Estimated Alpha Values:
-alpha1: 12.9042
-alpha7: 0.0599
-alpha8: -0.6155
-
-Validation Metrics:
-Mean Squared Error: 3388930768994341.00
-Root Mean Squared Error: 58214523.69
-Mean Absolute Error: 47347770.49
-
-==============================================================================
-==============================================================================
-==============================================================================
-==============================================================================
-
-Model w/ only lagged:
-Regression Results:
-                            OLS Regression Results                            
-==============================================================================
-Dep. Variable:           log_hashrate   R-squared:                       0.552
-Model:                            OLS   Adj. R-squared:                  0.550
-Method:                 Least Squares   F-statistic:                     219.7
-Date:                Sat, 25 Jan 2025   Prob (F-statistic):           7.01e-63
-Time:                        18:38:47   Log-Likelihood:                 353.41
-No. Observations:                 359   AIC:                            -700.8
-Df Residuals:                     356   BIC:                            -689.2
-Df Model:                           2                                         
-Covariance Type:            nonrobust                                         
-=======================================================================================
-                          coef    std err          t      P>|t|      [0.025      0.975]
----------------------------------------------------------------------------------------
-constant               12.8014      0.391     32.764      0.000      12.033      13.570
-log_eP_lag              0.0644      0.017      3.841      0.000       0.031       0.097
-log_mining_cost_lag    -0.6199      0.030    -20.748      0.000      -0.679      -0.561
-==============================================================================
-Omnibus:                        3.216   Durbin-Watson:                   1.816
-Prob(Omnibus):                  0.200   Jarque-Bera (JB):                3.213
-Skew:                          -0.195   Prob(JB):                        0.201
-Kurtosis:                       2.751   Cond. No.                     1.35e+03
-==============================================================================
-
-Notes:
-[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
-[2] The condition number is large, 1.35e+03. This might indicate that there are
-strong multicollinearity or other numerical problems.
-
-Estimated Alpha Values:
-alpha1: 12.8014
-alpha5: 0.0644
-alpha6: -0.6199
-
-Validation Metrics:
-Mean Squared Error: 3385416445525528.00
-Root Mean Squared Error: 58184331.62
-Mean Absolute Error: 47355868.56
-
-==============================================================================
-==============================================================================
-==============================================================================
-==============================================================================
-
-Model w/ only Current:
-Regression Results:
-                            OLS Regression Results                            
-==============================================================================
-Dep. Variable:           log_hashrate   R-squared:                       0.552
-Model:                            OLS   Adj. R-squared:                  0.550
-Method:                 Least Squares   F-statistic:                     219.7
-Date:                Sat, 25 Jan 2025   Prob (F-statistic):           7.29e-63
-Time:                        18:40:00   Log-Likelihood:                 353.37
-No. Observations:                 359   AIC:                            -700.7
-Df Residuals:                     356   BIC:                            -689.1
-Df Model:                           2                                         
-Covariance Type:            nonrobust                                         
-===================================================================================
-                      coef    std err          t      P>|t|      [0.025      0.975]
------------------------------------------------------------------------------------
-constant           12.8657      0.389     33.095      0.000      12.101      13.630
-log_eP              0.0608      0.017      3.630      0.000       0.028       0.094
-log_mining_cost    -0.6180      0.030    -20.759      0.000      -0.677      -0.559
-==============================================================================
-Omnibus:                        2.838   Durbin-Watson:                   1.818
-Prob(Omnibus):                  0.242   Jarque-Bera (JB):                2.858
-Skew:                          -0.183   Prob(JB):                        0.239
-Kurtosis:                       2.761   Cond. No.                     1.34e+03
-==============================================================================
-
-Notes:
-[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
-[2] The condition number is large, 1.34e+03. This might indicate that there are
-strong multicollinearity or other numerical problems.
-
-Estimated Alpha Values:
-alpha1: 12.8657
-alpha2: 0.0608
-alpha4: -0.6180
-
-Validation Metrics:
-Mean Squared Error: 3384864388529116.50
-Root Mean Squared Error: 58179587.39
-Mean Absolute Error: 47241900.15
+alpha1: 44.9623
+alpha2: 0.4098
+alpha3: -1.4882
+alpha4: 0.2499
+alpha5: 0.0346

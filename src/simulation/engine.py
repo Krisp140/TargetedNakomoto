@@ -29,7 +29,7 @@ def run_simulation(params):
     initial_block_reward = params.get('initial_block_reward', 6.25)
     time_paths = params.get('time_paths', {})
     time_steps = params.get('time_steps', 100)
-    
+    model = params.get('model', True)
     # Initialize blockchain
     blockchain = Blockchain(
         tau=tau,
@@ -64,7 +64,8 @@ def run_simulation(params):
             e_path[t] if t < len(e_path) else e_path[-1],
             current_P,
             efficiency_path[t] if t < len(efficiency_path) else efficiency_path[-1],
-            electricity_cost_path[t] if t < len(electricity_cost_path) else electricity_cost_path[-1]
+            electricity_cost_path[t] if t < len(electricity_cost_path) else electricity_cost_path[-1],
+            model
         )
         N.append(new_N)
         blockchain.DT = new_N

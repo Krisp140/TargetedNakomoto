@@ -1,5 +1,6 @@
 import streamlit as st
-
+from PIL import Image
+import os
 st.set_page_config(page_title="About - Hashrate Control Simulation", layout="wide", page_icon="💻")
 
 st.title("About the Hashrate Control Simulation")
@@ -12,9 +13,9 @@ while adapting to changing market conditions.
 """)
 st.header("Key Formulas")
 
-st.subheader("Hashrate Adjustment (with logs)")
+st.subheader("Original Hashrate Adjustment (with logs)")
 st.latex(r"""
-\widehat{N_{t+1}} = \alpha_1  +  \alpha_2 \widehat{e P_{t+1}} +  \alpha_3 \widehat{\eta} +  \alpha_4 \widehat{c}
+\widehat{N_{t+1}} = \alpha_1  +  \alpha_2 \widehat{e P_{t+1}} +  \alpha_3 \widehat{\eta} +  \alpha_4 \widehat{c} +  \alpha_5 \widehat{\Delta \text{T+1}}
 """)
 st.write("Where:")
 st.markdown("""
@@ -22,7 +23,39 @@ st.markdown("""
 - $e$ is the btc/usd exchange rate
 - $\eta$ is the mining efficiency
 - $c$ is the electricity cost
+- $\Delta {T+1}$ is the change in block speed
 """)
+
+st.write("Resultant Prediction:")
+image = Image.open(os.path.join("data", "old_model.png"))
+st.image(image, caption="Original Hashrate Prediction")
+
+st.write("However this model has a condition number of 235, indicating potential issues with multicollinearity. Therefore we run a lasso regression and find this:")
+image = Image.open(os.path.join("data", "reg_path.png"))
+st.image(image, caption="Lasso Regression")
+
+st.write("Based on the Lasso results, we remove the electricity and block speed variables from the model.")
+st.write("Resultant Prediction:")
+image = Image.open(os.path.join("data", "new_model.png"))
+st.image(image, caption="New Hashrate Prediction")
+
+st.subheader("New Hashrate Adjustment (with logs)")
+st.latex(r"""
+\widehat{N_{t+1}} = \alpha_1  +  \alpha_2 \widehat{e P_{t+1}} +  \alpha_3 \widehat{\eta}
+""")
+st.write("Where:")
+st.markdown("""
+- $N_{t+1}$ is the predicted hashrate
+- $e$ is the btc/usd exchange rate
+- $\eta$ is the mining efficiency
+""")
+st.write("And the alphas are:")
+st.latex(r"""
+\alpha_1 = 45.6767\\
+\alpha_2 = 0.4108\\
+\alpha_3 = -1.5100
+""")
+st.write("And the condition number changes: 235.42 → 60.02")
 
 st.header("Key Components")
 
@@ -34,9 +67,9 @@ st.markdown("""
   - Lower values make the system more stable but slower to respond
 
 - **Gamma (γ)**: The control parameter that influences the strength of the correction.
-  - Range: 0 to 2
-  - Higher values result in stronger corrections
-  - Lower values result in gentler adjustments
+  - Range: 0 to 1
+  - Lower values result in stronger corrections
+  - Higher values result in gentler adjustments
 """)
 
 st.subheader("2. Target Bounds")

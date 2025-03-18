@@ -76,27 +76,6 @@ class Blockchain:
         epoch.add_hashrate(new_hashrate)
         return new_hashrate
     
-
-    def adjust_hashrate_with_changes(self, hashrate, epoch_idx, e_current, e_past, e_past_2, P_current, P_past, P_past_2):
-        alpha1 = 0.0233
-        alpha2 = 0.1277
-        alpha5 = 0.0753
-
-        epoch = self.epochs[epoch_idx]
-        log_EP_current = np.log(e_current * P_current + 1e12)
-        log_EP_past = np.log(e_past * P_past + 1e12)
-        log_EP_past2 = np.log(e_past_2 * P_past_2 + 1e12)
-
-        predicted_log_hashrate_change = (
-            alpha1
-            + alpha2 * (log_EP_current - log_EP_past)
-            + alpha5 * (log_EP_past - log_EP_past2)
-        )
-        new_hashrate_change = np.exp(predicted_log_hashrate_change)
-        new_hashrate = hashrate + new_hashrate_change
-        epoch.add_hashrate(new_hashrate)
-        return new_hashrate
-    
     def end_of_epoch(self):
         last_epoch = self.epochs[-1]
         P_B_median = last_epoch.median_block_reward()

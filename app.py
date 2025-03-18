@@ -24,15 +24,14 @@ with logo_col:
     st.image(cropped_image, width=200)
 
 # Sample data for simulation
-data = pd.read_csv('data/bitcoin_mining_data_daily.csv')
-hashrate = data['hashrate'].tolist()
-print(hashrate[0])
-e_path = data['price'].tolist()  # Exchange rate path
+data = pd.read_csv('data/merged_data.csv')
+hashrate = data['HashRate'].tolist()
+e_path = data['BTCPrice'].tolist()  # Exchange rate path
 time_steps = len(e_path)
-efficiency_path = data['mining_cost'].tolist()     # Efficiency path
-electricity_cost_path = data['electricity_price'].tolist()  # Electricity cost path
-block_reward_path = data['block_reward'].tolist()
-fee_path = data['fees'].tolist()
+efficiency_path = data['Efficiency'].tolist()     # Efficiency path
+electricity_cost_path = data['ElectricityPrice'].tolist()  # Electricity cost path
+block_reward_path = data['BTC'].tolist()
+#fee_path = data['fees'].tolist()
 
 # Sidebar for parameters
 st.sidebar.header("Control Parameters")
@@ -57,7 +56,7 @@ lower_bound_percent = st.sidebar.slider("Lower Bound (%)",
 )
 
 # Convert percentages to actual bounds based on initial block reward
-mean_hashrate = float(data['hashrate'].mean())
+mean_hashrate = float(data['HashRate'].mean())
 upper_bound = (upper_bound_percent / 100.0) * mean_hashrate
 lower_bound = (lower_bound_percent / 100.0) * mean_hashrate
 

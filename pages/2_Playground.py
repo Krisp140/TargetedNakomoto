@@ -6,13 +6,16 @@ import io
 import sys
 from PIL import Image
 from src.models.blockchain import Blockchain
+from src.simulation.engine import run_simulation
 
 # Load default time path data
 try:
-    default_data = pd.read_csv('data/bitcoin_mining_data_daily.csv')
-    default_exchange_rate_path = default_data['price'].tolist()
-    default_efficiency_path = default_data['mining_cost'].tolist()
-    default_electricity_cost_path = default_data['electricity_price'].tolist()
+    default_data = pd.read_csv('data/merged_data.csv')
+    default_exchange_rate_path = default_data['BTCPrice'].tolist()
+    default_efficiency_path = default_data['Efficiency'].tolist()
+    default_electricity_cost_path = default_data['ElectricityPrice'].tolist()
+    hashrate_path = default_data['HashRate'].tolist()
+    block_reward_path = default_data['BTC'].tolist()
     default_time_steps = len(default_exchange_rate_path)
 except Exception as e:
     st.warning(f"Could not load default data: {e}. Using synthetic defaults.")
@@ -21,7 +24,8 @@ except Exception as e:
     default_exchange_rate_path = [50000.0] * default_time_steps
     default_efficiency_path = [0.001] * default_time_steps
     default_electricity_cost_path = [0.05] * default_time_steps
-
+    hashrate_path = [0.0] * default_time_steps
+    default_block_reward_path = [6.25] * default_time_steps
 
 st.set_page_config(page_title="Custom Simulation Playground", layout="wide", page_icon="🎮")
 
@@ -39,7 +43,7 @@ gamma = st.sidebar.number_input("Gamma", min_value=0.0, max_value=1.0, value=0.1
 
 # Target bounds
 st.sidebar.header("Target Bounds")
-mean_hashrate = 6.53e+08 # Default value
+mean_hashrate = float(default_data['HashRate'].mean())
 upper_bound_percent = st.sidebar.slider("Upper Bound (%)", 
     min_value=0.0, 
     max_value=200.0, 
@@ -71,10 +75,12 @@ modify_efficiency = st.checkbox("Modify Efficiency Path", value=False)
 modify_electricity_cost = st.checkbox("Modify Electricity Cost Path", value=False)
 
 # Simulation length
-time_steps = st.slider("Simulation Length (time steps)", min_value=10, max_value=365, value=200)
+time_steps = st.slider("Simulation Length (time steps)", min_value=10, max_value=1163, value=500)
 
 # Method selection tabs
 tab1, tab2 = st.tabs(["Manual Pattern Creation", "Upload CSV Data"])
+
+model = False if modify_electricity_cost else True
 
 with tab1:
     any_parameter_selected = modify_exchange_rate or modify_efficiency or modify_electricity_cost
@@ -84,7 +90,17 @@ with tab1:
         pattern_type = st.selectbox(
             "Select Pattern Type",
             ["Steady", "Linear Increase", "Linear Decrease", "Cyclical", "Random Walk", "Step Function"]
-    )
+        )
+        
+        # Initialize paths with default values if not modified
+        if not modify_exchange_rate:
+            exchange_rate_path = default_exchange_rate_path[:time_steps] if time_steps <= len(default_exchange_rate_path) else default_exchange_rate_path + [default_exchange_rate_path[-1]] * (time_steps - len(default_exchange_rate_path))
+        
+        if not modify_efficiency:
+            efficiency_path = default_efficiency_path[:time_steps] if time_steps <= len(default_efficiency_path) else default_efficiency_path + [default_efficiency_path[-1]] * (time_steps - len(default_efficiency_path))
+        
+        if not modify_electricity_cost:
+            electricity_cost_path = default_electricity_cost_path[:time_steps] if time_steps <= len(default_electricity_cost_path) else default_electricity_cost_path + [default_electricity_cost_path[-1]] * (time_steps - len(default_electricity_cost_path))
     
 
         # Parameters for pattern generation
@@ -92,9 +108,11 @@ with tab1:
             if modify_exchange_rate:
                 base_value_exchange = st.number_input("Exchange Rate Base Value (USD)", min_value=1.0, value=50000.0)
                 exchange_rate_path = [base_value_exchange] * time_steps
+            
             if modify_efficiency:
-                base_value_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=3e6)
+                base_value_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
                 efficiency_path = [base_value_efficiency] * time_steps
+            
             if modify_electricity_cost:
                 base_value_electricity = st.number_input("Electricity Cost Base Value (USD/kWh)", min_value=0.01, value=0.15)
                 electricity_cost_path = [base_value_electricity] * time_steps
@@ -102,9 +120,10 @@ with tab1:
             
         elif pattern_type == "Linear Increase":
             if modify_exchange_rate:
-                    start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=30000.0)
-                    end_exchange = st.number_input("Exchange Rate End Value (USD)", min_value=1.0, value=70000.0)
-                    exchange_rate_path = np.linspace(start_exchange, end_exchange, time_steps).tolist()
+                start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=30000.0)
+                end_exchange = st.number_input("Exchange Rate End Value (USD)", min_value=1.0, value=70000.0)
+                exchange_rate_path = np.linspace(start_exchange, end_exchange, time_steps).tolist()
+            
             if modify_efficiency:
                 start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.0008)
                 end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=0.0012)
@@ -117,113 +136,116 @@ with tab1:
                  
             
         elif pattern_type == "Linear Decrease":
-            start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=70000.0)
-            end_exchange = st.number_input("Exchange Rate End Value (USD)", min_value=1.0, value=30000.0)
+            if modify_exchange_rate:
+                start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=70000.0)
+                end_exchange = st.number_input("Exchange Rate End Value (USD)", min_value=1.0, value=30000.0)
+                exchange_rate_path = np.linspace(start_exchange, end_exchange, time_steps).tolist()
             
-            start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.0012)
-            end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=0.0008)
+            if modify_efficiency:
+                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.0012)
+                end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=0.0008)
+                efficiency_path = np.linspace(start_efficiency, end_efficiency, time_steps).tolist()
             
-            start_electricity = st.number_input("Electricity Cost Start Value (USD/kWh)", min_value=0.01, value=0.07)
-            end_electricity = st.number_input("Electricity Cost End Value (USD/kWh)", min_value=0.01, value=0.03)
-            
-            # Generate linearly decreasing paths
-            exchange_rate_path = np.linspace(start_exchange, end_exchange, time_steps).tolist()
-            efficiency_path = np.linspace(start_efficiency, end_efficiency, time_steps).tolist()
-            electricity_cost_path = np.linspace(start_electricity, end_electricity, time_steps).tolist()
+            if modify_electricity_cost:
+                start_electricity = st.number_input("Electricity Cost Start Value (USD/kWh)", min_value=0.01, value=0.07)
+                end_electricity = st.number_input("Electricity Cost End Value (USD/kWh)", min_value=0.01, value=0.03)
+                electricity_cost_path = np.linspace(start_electricity, end_electricity, time_steps).tolist()
             
         elif pattern_type == "Cyclical":
-            base_exchange = st.number_input("Exchange Rate Base Value (USD)", min_value=1.0, value=50000.0)
-            amplitude_exchange = st.number_input("Exchange Rate Amplitude (USD)", min_value=0.0, value=20000.0)
-            periods_exchange = st.number_input("Number of Exchange Rate Cycles", min_value=0.5, value=2.0, step=0.5)
+            if modify_exchange_rate:
+                base_exchange = st.number_input("Exchange Rate Base Value (USD)", min_value=1.0, value=50000.0)
+                amplitude_exchange = st.number_input("Exchange Rate Amplitude (USD)", min_value=0.0, value=20000.0)
+                periods_exchange = st.number_input("Number of Exchange Rate Cycles", min_value=0.5, value=2.0, step=0.5)
+                t = np.linspace(0, 2*np.pi*periods_exchange, time_steps)
+                exchange_rate_path = (base_exchange + amplitude_exchange * np.sin(t)).tolist()
             
-            base_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
-            amplitude_efficiency = st.number_input("Efficiency Amplitude", min_value=0.0, value=0.0002)
-            periods_efficiency = st.number_input("Number of Efficiency Cycles", min_value=0.5, value=1.5, step=0.5)
+            if modify_efficiency:
+                base_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
+                amplitude_efficiency = st.number_input("Efficiency Amplitude", min_value=0.0, value=0.0002)
+                periods_efficiency = st.number_input("Number of Efficiency Cycles", min_value=0.5, value=1.5, step=0.5)
+                t = np.linspace(0, 2*np.pi*periods_efficiency, time_steps)
+                efficiency_path = (base_efficiency + amplitude_efficiency * np.sin(t)).tolist()
             
-            base_electricity = st.number_input("Electricity Cost Base Value (USD/kWh)", min_value=0.01, value=0.05)
-            amplitude_electricity = st.number_input("Electricity Cost Amplitude (USD/kWh)", min_value=0.0, value=0.02)
-            periods_electricity = st.number_input("Number of Electricity Cost Cycles", min_value=0.5, value=1.0, step=0.5)
-            
-            # Generate cyclical paths
-            t = np.linspace(0, 2*np.pi*periods_exchange, time_steps)
-            exchange_rate_path = (base_exchange + amplitude_exchange * np.sin(t)).tolist()
-            
-            t = np.linspace(0, 2*np.pi*periods_efficiency, time_steps)
-            efficiency_path = (base_efficiency + amplitude_efficiency * np.sin(t)).tolist()
-            
-            t = np.linspace(0, 2*np.pi*periods_electricity, time_steps)
-            electricity_cost_path = (base_electricity + amplitude_electricity * np.sin(t)).tolist()
+            if modify_electricity_cost:
+                base_electricity = st.number_input("Electricity Cost Base Value (USD/kWh)", min_value=0.01, value=0.05)
+                amplitude_electricity = st.number_input("Electricity Cost Amplitude (USD/kWh)", min_value=0.0, value=0.02)
+                periods_electricity = st.number_input("Number of Electricity Cost Cycles", min_value=0.5, value=1.0, step=0.5)
+                t = np.linspace(0, 2*np.pi*periods_electricity, time_steps)
+                electricity_cost_path = (base_electricity + amplitude_electricity * np.sin(t)).tolist()
             
         elif pattern_type == "Random Walk":
             seed = st.number_input("Random Seed", min_value=0, value=42)
-            start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=50000.0)
-            volatility_exchange = st.number_input("Exchange Rate Volatility (%)", min_value=0.1, value=5.0)
+            np.random.seed(seed)  # Set the seed for reproducibility
             
-            start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.001)
-            volatility_efficiency = st.number_input("Efficiency Volatility (%)", min_value=0.1, value=3.0)
+            if modify_exchange_rate:
+                start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=50000.0)
+                volatility_exchange = st.number_input("Exchange Rate Volatility (%)", min_value=0.1, value=5.0)
+                
+                # Generate random walk path for exchange rate
+                exchange_rate_path = [start_exchange]
+                for _ in range(time_steps-1):
+                    change = exchange_rate_path[-1] * (volatility_exchange/100) * np.random.randn()
+                    exchange_rate_path.append(max(1.0, exchange_rate_path[-1] + change))
             
-            start_electricity = st.number_input("Electricity Cost Start Value (USD/kWh)", min_value=0.01, value=0.05)
-            volatility_electricity = st.number_input("Electricity Cost Volatility (%)", min_value=0.1, value=2.0)
+            if modify_efficiency:
+                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.001)
+                volatility_efficiency = st.number_input("Efficiency Volatility (%)", min_value=0.1, value=3.0)
+                
+                # Generate random walk path for efficiency
+                efficiency_path = [start_efficiency]
+                for _ in range(time_steps-1):
+                    change = efficiency_path[-1] * (volatility_efficiency/100) * np.random.randn()
+                    efficiency_path.append(max(0.0001, efficiency_path[-1] + change))
             
-            # Set the seed for reproducibility
-            np.random.seed(seed)
-            
-            # Generate random walk paths
-            exchange_rate_path = [start_exchange]
-            for _ in range(time_steps-1):
-                change = exchange_rate_path[-1] * (volatility_exchange/100) * np.random.randn()
-                exchange_rate_path.append(max(1.0, exchange_rate_path[-1] + change))
-            
-            efficiency_path = [start_efficiency]
-            for _ in range(time_steps-1):
-                change = efficiency_path[-1] * (volatility_efficiency/100) * np.random.randn()
-                efficiency_path.append(max(0.0001, efficiency_path[-1] + change))
-            
-            electricity_cost_path = [start_electricity]
-            for _ in range(time_steps-1):
-                change = electricity_cost_path[-1] * (volatility_electricity/100) * np.random.randn()
-                electricity_cost_path.append(max(0.01, electricity_cost_path[-1] + change))
+            if modify_electricity_cost:
+                start_electricity = st.number_input("Electricity Cost Start Value (USD/kWh)", min_value=0.01, value=0.05)
+                volatility_electricity = st.number_input("Electricity Cost Volatility (%)", min_value=0.1, value=2.0)
+                
+                # Generate random walk path for electricity cost
+                electricity_cost_path = [start_electricity]
+                for _ in range(time_steps-1):
+                    change = electricity_cost_path[-1] * (volatility_electricity/100) * np.random.randn()
+                    electricity_cost_path.append(max(0.01, electricity_cost_path[-1] + change))
         
         elif pattern_type == "Step Function":
-            base_exchange = st.number_input("Exchange Rate Base Value (USD)", min_value=1.0, value=50000.0)
-            step_size_exchange = st.number_input("Exchange Rate Step Size (USD)", min_value=0.0, value=10000.0)
-            step_points_exchange = st.multiselect(
-                "Exchange Rate Step Points (time steps)",
-                options=list(range(time_steps)),
-                default=[int(time_steps/3), int(2*time_steps/3)]
-            )
+            if modify_exchange_rate:
+                base_exchange = st.number_input("Exchange Rate Base Value (USD)", min_value=1.0, value=50000.0)
+                step_size_exchange = st.number_input("Exchange Rate Step Size (USD)", min_value=0.0, value=10000.0)
+                step_points_exchange = st.multiselect(
+                    "Exchange Rate Step Points (time steps)",
+                    options=list(range(time_steps)),
+                    default=[int(time_steps/3), int(2*time_steps/3)]
+                )
+                exchange_rate_path = [base_exchange] * time_steps
+                for step in step_points_exchange:
+                    for i in range(step, time_steps):
+                        exchange_rate_path[i] += step_size_exchange
             
-            base_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
-            step_size_efficiency = st.number_input("Efficiency Step Size", min_value=0.0, value=0.0002)
-            step_points_efficiency = st.multiselect(
-                "Efficiency Step Points (time steps)",
-                options=list(range(time_steps)),
-                default=[int(time_steps/4), int(3*time_steps/4)]
-            )
+            if modify_efficiency:
+                base_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
+                step_size_efficiency = st.number_input("Efficiency Step Size", min_value=0.0, value=0.0002)
+                step_points_efficiency = st.multiselect(
+                    "Efficiency Step Points (time steps)",
+                    options=list(range(time_steps)),
+                    default=[int(time_steps/4), int(3*time_steps/4)]
+                )
+                efficiency_path = [base_efficiency] * time_steps
+                for step in step_points_efficiency:
+                    for i in range(step, time_steps):
+                        efficiency_path[i] += step_size_efficiency
             
-            base_electricity = st.number_input("Electricity Cost Base Value (USD/kWh)", min_value=0.01, value=0.05)
-            step_size_electricity = st.number_input("Electricity Cost Step Size (USD/kWh)", min_value=0.0, value=0.02)
-            step_points_electricity = st.multiselect(
-                "Electricity Cost Step Points (time steps)",
-                options=list(range(time_steps)),
-                default=[int(time_steps/2)]
-            )
-            
-            # Generate step function paths
-            exchange_rate_path = [base_exchange] * time_steps
-            for step in step_points_exchange:
-                for i in range(step, time_steps):
-                    exchange_rate_path[i] += step_size_exchange
-            
-            efficiency_path = [base_efficiency] * time_steps
-            for step in step_points_efficiency:
-                for i in range(step, time_steps):
-                    efficiency_path[i] += step_size_efficiency
-            
-            electricity_cost_path = [base_electricity] * time_steps
-            for step in step_points_electricity:
-                for i in range(step, time_steps):
-                    electricity_cost_path[i] += step_size_electricity
+            if modify_electricity_cost:
+                base_electricity = st.number_input("Electricity Cost Base Value (USD/kWh)", min_value=0.01, value=0.05)
+                step_size_electricity = st.number_input("Electricity Cost Step Size (USD/kWh)", min_value=0.0, value=0.02)
+                step_points_electricity = st.multiselect(
+                    "Electricity Cost Step Points (time steps)",
+                    options=list(range(time_steps)),
+                    default=[int(time_steps/2)]
+                )
+                electricity_cost_path = [base_electricity] * time_steps
+                for step in step_points_electricity:
+                    for i in range(step, time_steps):
+                        electricity_cost_path[i] += step_size_electricity
 
 with tab2:
     st.subheader("Upload CSV Data")
@@ -326,14 +348,9 @@ ax3.grid(True)
 plt.tight_layout()
 st.pyplot(fig)
 
-# Initial conditions section
-st.header("Initial Conditions")
-col1, col2 = st.columns(2)
-with col1:
-    initial_hashrate = st.number_input("Initial Hashrate", min_value=1e6, value=600517281.7255559, format="%e")
-with col2:
-    initial_block_reward = st.number_input("Initial Block Reward", min_value=0.1, value=6.25)
-
+#Initial conditions
+initial_hashrate = hashrate_path[0]
+initial_block_reward = block_reward_path[0]
 # Run simulation button
 if st.button("Run Simulation with Custom Data"):
     # Initialize blockchain with parameters
@@ -344,47 +361,37 @@ if st.button("Run Simulation with Custom Data"):
         lower_bound=lower_bound,
         initial_difficulty=1e12
     )
+
+    sim_params = {
+            'model': model,
+            'tau': tau,
+            'gamma': gamma,
+            'upper_bound': upper_bound,
+            'lower_bound': lower_bound,
+            'initial_hashrate': initial_hashrate,
+            'initial_block_reward': initial_block_reward,
+            'time_steps': time_steps,
+            'time_paths': {
+                'exchange_rate': exchange_rate_path,
+                'efficiency': efficiency_path,
+                'electricity_cost': electricity_cost_path
+            }
+        }
     
     # Run simulation
-    N = [float(initial_hashrate)]
-    P = [float(initial_block_reward)]
-    
-    for t in range(time_steps):
-        current_N = N[-1]
-        current_P = P[-1]
-
-        # Adjust reward within the epoch
-        adjusted_reward = blockchain.adjust_reward(current_P, len(blockchain.epochs) - 1)
-        
-        # Get time path values for this step (with bounds checking)
-        e_current = exchange_rate_path[min(t, len(exchange_rate_path)-1)]
-        efficiency_current = efficiency_path[min(t, len(efficiency_path)-1)]
-        electricity_cost_current = electricity_cost_path[min(t, len(electricity_cost_path)-1)]
-        
-        # Calculate new hashrate
-        new_N = blockchain.adjust_hashrate(
-            current_N,
-            len(blockchain.epochs) - 1,
-            e_current,
-            current_P,
-            efficiency_current,
-            electricity_cost_current
-        )
-        
-        N.append(new_N)
-        P.append(adjusted_reward)
-        blockchain.DT = new_N
-        
-        # Check for epoch end
-        if t > 0 and t % 14 == 0:
-            blockchain.end_of_epoch()
+    results = run_simulation(sim_params)
     
     # Create visualization
-    st.header("Simulation Results")
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
     
     # Plot hashrate
-    ax1.plot(N, label='Simulated Hashrate', color='blue')
+    ax1.plot(results['hashrate'], label='Simulated Hashrate', color='blue')
+    ax1.plot(hashrate_path[:time_steps], 
+            label='Actual Hashrate',
+            marker='x',
+            alpha=0.6,
+            linestyle='--',
+            color='red')
     ax1.set_title('Hashrate over Time')
     ax1.set_xlabel('Time Steps')
     ax1.set_ylabel('Hashrate')
@@ -395,47 +402,50 @@ if st.button("Run Simulation with Custom Data"):
     ax1.legend()
     
     # Plot block rewards
-    ax2.plot(P, label='Block Reward', color='orange')
+    ax2.plot(results['block_reward'], label='Block Reward', color='orange')
+    ax2.plot(block_reward_path[:time_steps], 
+            label='Actual Block Reward',
+            marker='x',
+            alpha=0.6,
+            linestyle='--',
+            color='blue')
     ax2.set_title('Miners Block Reward over Time')
     ax2.set_xlabel('Time Steps')
-    ax2.set_ylabel('Block Reward')
+    ax2.set_ylabel('Block Reward (log scale)')
+    ax2.set_yscale('log')
     ax2.grid(True)
     ax2.legend()
     
     plt.tight_layout()
     st.pyplot(fig)
-    
+
     # Display statistics
-    st.header("Simulation Statistics")
-    col1, col2, col3 = st.columns(3)
+    st.header("Statistics")
     
-    with col1:
-        st.metric("Final Hashrate", f"{N[-1]:.2e} H/s")
-        st.metric("Initial Hashrate", f"{N[0]:.2e} H/s")
-        st.metric("Hashrate Change", f"{(N[-1]/N[0] - 1)*100:.2f}%")
+    # Current Values
+    st.subheader("Current Values")
+    st.metric("Final Hashrate", f"{results['hashrate'][-1]:.2e} H/s")
+    st.metric("Final Block Reward", f"{results['block_reward'][-1]:.2f}")
+    st.metric("Number of Epochs", results['epochs'])
     
-    with col2:
-        st.metric("Final Block Reward", f"{P[-1]:.2f}")
-        st.metric("Initial Block Reward", f"{P[0]:.2f}")
-        st.metric("Reward Change", f"{(P[-1]/P[0] - 1)*100:.2f}%")
+    # Volatility Metrics
+    st.subheader("Volatility Metrics")
+    st.metric("Hashrate Volatility: (std / mean)", f"{results['stats']['hashrate_volatility']:.2f}%")
     
-    with col3:
-        st.metric("Number of Epochs", len(blockchain.epochs))
-        time_in_bounds = sum(1 for n in N if lower_bound <= n <= upper_bound)
-        bound_adherence = (time_in_bounds / len(N)) * 100
-        st.metric("Time in Bounds", f"{bound_adherence:.1f}%")
-        hashrate_volatility = np.std(N) / np.mean(N) * 100
-        st.metric("Hashrate Volatility", f"{hashrate_volatility:.2f}%")
+    # Performance Metrics
+    st.subheader("Performance Metrics")
+    st.metric("Time in Bounds", f"{results['stats']['bound_adherence']:.1f}%")
     
     # Export results option
     st.subheader("Export Results")
+    N = len(results['hashrate'])
     results_df = pd.DataFrame({
-        'Time_Step': list(range(len(N))),
-        'Hashrate': N,
-        'Block_Reward': P,
-        'Exchange_Rate': exchange_rate_path + [exchange_rate_path[-1]] if len(exchange_rate_path) < len(N) else exchange_rate_path[:len(N)],
-        'Efficiency': efficiency_path + [efficiency_path[-1]] if len(efficiency_path) < len(N) else efficiency_path[:len(N)],
-        'Electricity_Cost': electricity_cost_path + [electricity_cost_path[-1]] if len(electricity_cost_path) < len(N) else electricity_cost_path[:len(N)]
+        'Time_Step': list(range(N)),
+        'Hashrate': results['hashrate'],
+        'Block_Reward': results['block_reward'],
+        'Exchange_Rate': exchange_rate_path,
+        'Efficiency': efficiency_path,
+        'Electricity_Cost': electricity_cost_path
     })
     
     # Convert to CSV
