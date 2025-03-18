@@ -11,17 +11,20 @@ st.set_page_config(page_title="Nakamoto Blockchain Simulation", layout="wide", p
 # Create columns for title and logo
 title_col, logo_col = st.columns([3, 1])
 
+# Title and subtitle
 with title_col:
-    st.title("Hashrate Control Simulation")
+    st.title("Nakamoto Blockchain Simulation")
+    st.markdown("*Created by Kristian Praizner & Daniel Aronoff*")
+    st.markdown("A control theory approach to Bitcoin hashrate targeting")
 
 with logo_col:
     # Open and crop the image
-    image = Image.open('static/btc2.png')
+    image = Image.open('static/mit.jpg')
     # Get current dimensions
     width, height = image.size
     # Crop from the bottom (adjust the 0.8 factor to crop more or less)
-    cropped_image = image.crop((0, int(height * 0.2), width, int(height * 0.8)))
-    st.image(cropped_image, width=200)
+    #cropped_image = image.crop((0, int(height * 0.5), width, int(height * 0.5)))
+    st.image(image)
 
 # Sample data for simulation
 data = pd.read_csv('data/merged_data.csv')
@@ -34,35 +37,53 @@ block_reward_path = data['BTC'].tolist()
 #fee_path = data['fees'].tolist()
 
 # Sidebar for parameters
+# Add Bitcoin logo at the top of the sidebar
+st.sidebar.image("static/btc2.png", width=100, use_column_width=True)
+st.sidebar.markdown("---")  # Add a divider line after the logo
+
 st.sidebar.header("Control Parameters")
 tau = st.sidebar.number_input("Tau", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
 gamma = st.sidebar.number_input("Gamma", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
 
 st.sidebar.header("Target Bounds")
-upper_bound_percent = st.sidebar.slider("Upper Bound (%)", 
-    min_value=0.0, 
-    max_value=200.0, 
-    value=120.0, 
-    step=1.0,
-    help="Upper bound as a percentage of the mean hashrate"
-)
-
-lower_bound_percent = st.sidebar.slider("Lower Bound (%)", 
-    min_value=0.0, 
-    max_value=200.0, 
-    value=80.0, 
-    step=1.0,
-    help="Lower bound as a percentage of the mean hashrate"
-)
-
-# Convert percentages to actual bounds based on initial block reward
+# Calculate mean hashrate for default value
 mean_hashrate = float(data['HashRate'].mean())
-upper_bound = (upper_bound_percent / 100.0) * mean_hashrate
-lower_bound = (lower_bound_percent / 100.0) * mean_hashrate
+
+# Extract significant digits and exponent
+sig_figs, exponent = "{:.3e}".format(mean_hashrate).split('e')
+sig_figs = float(sig_figs)
+exponent = int(exponent)
+
+# Create input for significant figures only
+sig_fig_input = st.sidebar.number_input(
+    f"Target Hashrate (×10^{exponent})", 
+    min_value=0.1, 
+    max_value=9.99,
+    value=sig_figs,
+    format="%.3f",
+    help="Enter the significant figures of the target hashrate"
+)
+
+# Convert back to full hashrate
+target_hashrate = sig_fig_input * (10 ** exponent)
+
+# Input field for range percentage with 10% as default
+range_percent = st.sidebar.number_input(
+    "Range (% of target hashrate)", 
+    min_value=1.0, 
+    max_value=100.0, 
+    value=10.0, 
+    step=1.0,
+    help="Range as a percentage of the target hashrate"
+)
+
+# Calculate upper and lower bounds based on target and range
+upper_bound = target_hashrate * (1 + range_percent / 100.0)
+lower_bound = target_hashrate * (1 - range_percent / 100.0)
 
 # Display the actual values
-st.sidebar.text(f"Actual Upper Bound: {upper_bound:.2e}")
-st.sidebar.text(f"Actual Lower Bound: {lower_bound:.2e}")
+st.sidebar.text(f"Upper Bound: {upper_bound:.2e}")
+st.sidebar.text(f"Lower Bound: {lower_bound:.2e}")
 
 # Main content
 col1, col2 = st.columns([3, 1])
@@ -134,7 +155,7 @@ with col1:
             # Current Values
             st.subheader("Current Values")
             st.metric("Final Hashrate", f"{results['hashrate'][-1]:.2e} H/s")
-            st.metric("Final Block Reward", f"{results['block_reward'][-1]:.2f}")
+            st.metric("Final Block Reward (per day)", f"{results['block_reward'][-1]:.2f}")
             st.metric("Number of Epochs", results['epochs'])
             
             # Volatility Metrics

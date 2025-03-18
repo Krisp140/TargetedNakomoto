@@ -7,6 +7,7 @@ import sys
 from PIL import Image
 from src.models.blockchain import Blockchain
 from src.simulation.engine import run_simulation
+import math
 
 # Load default time path data
 try:
@@ -41,33 +42,45 @@ st.sidebar.header("Control Parameters")
 tau = st.sidebar.number_input("Tau", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
 gamma = st.sidebar.number_input("Gamma", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
 
-# Target bounds
 st.sidebar.header("Target Bounds")
+# Calculate mean hashrate for default value
 mean_hashrate = float(default_data['HashRate'].mean())
-upper_bound_percent = st.sidebar.slider("Upper Bound (%)", 
-    min_value=0.0, 
-    max_value=200.0, 
-    value=120.0, 
-    step=1.0,
-    help="Upper bound as a percentage of the mean hashrate"
+
+# Extract significant digits and exponent
+sig_figs, exponent = "{:.3e}".format(mean_hashrate).split('e')
+sig_figs = float(sig_figs)
+exponent = int(exponent)
+
+# Create input for significant figures only
+sig_fig_input = st.sidebar.number_input(
+    f"Target Hashrate (×10^{exponent})", 
+    min_value=0.1, 
+    max_value=9.99,
+    value=sig_figs,
+    format="%.3f",
+    help="Enter the significant figures of the target hashrate"
 )
 
-lower_bound_percent = st.sidebar.slider("Lower Bound (%)", 
-    min_value=0.0, 
-    max_value=200.0, 
-    value=80.0, 
+# Convert back to full hashrate
+target_hashrate = sig_fig_input * (10 ** exponent)
+
+# Input field for range percentage with 10% as default
+range_percent = st.sidebar.number_input(
+    "Range (% of target hashrate)", 
+    min_value=1.0, 
+    max_value=100.0, 
+    value=10.0, 
     step=1.0,
-    help="Lower bound as a percentage of the mean hashrate"
+    help="Range as a percentage of the target hashrate"
 )
 
-# Calculate actual bounds
-upper_bound = (upper_bound_percent / 100.0) * mean_hashrate
-lower_bound = (lower_bound_percent / 100.0) * mean_hashrate
+# Calculate upper and lower bounds based on target and range
+upper_bound = target_hashrate * (1 + range_percent / 100.0)
+lower_bound = target_hashrate * (1 - range_percent / 100.0)
 
 # Display the actual values
-st.sidebar.text(f"Actual Upper Bound: {upper_bound:.2e}")
-st.sidebar.text(f"Actual Lower Bound: {lower_bound:.2e}")
-
+st.sidebar.text(f"Upper Bound: {upper_bound:.2e}")
+st.sidebar.text(f"Lower Bound: {lower_bound:.2e}")
 # Parameter selection
 st.header("Select Time Paths to Customize")
 modify_exchange_rate = st.checkbox("Modify Exchange Rate Path", value=True)  # Default selected
@@ -87,10 +100,6 @@ with tab1:
 
     if any_parameter_selected:
         st.subheader("Create Patterns Manually")
-        pattern_type = st.selectbox(
-            "Select Pattern Type",
-            ["Steady", "Linear Increase", "Linear Decrease", "Cyclical", "Random Walk", "Step Function"]
-        )
         
         # Initialize paths with default values if not modified
         if not modify_exchange_rate:
@@ -101,151 +110,154 @@ with tab1:
         
         if not modify_electricity_cost:
             electricity_cost_path = default_electricity_cost_path[:time_steps] if time_steps <= len(default_electricity_cost_path) else default_electricity_cost_path + [default_electricity_cost_path[-1]] * (time_steps - len(default_electricity_cost_path))
-    
-
-        # Parameters for pattern generation
-        if pattern_type == "Steady":
-            if modify_exchange_rate:
+        
+        # Exchange Rate Pattern
+        if modify_exchange_rate:
+            st.markdown("### Exchange Rate Pattern")
+            exchange_pattern_type = st.selectbox(
+                "Select Exchange Rate Pattern",
+                ["Steady", "Linear Increase", "Linear Decrease", "Cyclical", "Random Walk", "Step Function"],
+                key="exchange_pattern"
+            )
+            
+            if exchange_pattern_type == "Steady":
                 base_value_exchange = st.number_input("Exchange Rate Base Value (USD)", min_value=1.0, value=50000.0)
                 exchange_rate_path = [base_value_exchange] * time_steps
             
-            if modify_efficiency:
-                base_value_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
-                efficiency_path = [base_value_efficiency] * time_steps
-            
-            if modify_electricity_cost:
-                base_value_electricity = st.number_input("Electricity Cost Base Value (USD/kWh)", min_value=0.01, value=0.15)
-                electricity_cost_path = [base_value_electricity] * time_steps
-    
-            
-        elif pattern_type == "Linear Increase":
-            if modify_exchange_rate:
+            elif exchange_pattern_type == "Linear Increase":
                 start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=30000.0)
                 end_exchange = st.number_input("Exchange Rate End Value (USD)", min_value=1.0, value=70000.0)
                 exchange_rate_path = np.linspace(start_exchange, end_exchange, time_steps).tolist()
             
-            if modify_efficiency:
-                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.0008)
-                end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=0.0012)
-                efficiency_path = np.linspace(start_efficiency, end_efficiency, time_steps).tolist()
-            
-            if modify_electricity_cost:
-                start_electricity = st.number_input("Electricity Cost Start Value (USD/kWh)", min_value=0.01, value=0.03)
-                end_electricity = st.number_input("Electricity Cost End Value (USD/kWh)", min_value=0.01, value=0.07)
-                electricity_cost_path = np.linspace(start_electricity, end_electricity, time_steps).tolist()
-                 
-            
-        elif pattern_type == "Linear Decrease":
-            if modify_exchange_rate:
+            elif exchange_pattern_type == "Linear Decrease":
                 start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=70000.0)
                 end_exchange = st.number_input("Exchange Rate End Value (USD)", min_value=1.0, value=30000.0)
                 exchange_rate_path = np.linspace(start_exchange, end_exchange, time_steps).tolist()
             
-            if modify_efficiency:
+            elif exchange_pattern_type == "Cyclical":
+                base_exchange = st.number_input("Exchange Rate Base Value (USD)", min_value=1.0, value=50000.0)
+                amplitude_exchange = st.number_input("Exchange Rate Amplitude (USD)", min_value=0.0, value=20000.0)
+                cycles_exchange = st.number_input("Number of Complete Cycles", min_value=0.1, value=3.0)
+                exchange_rate_path = [base_exchange + amplitude_exchange * math.sin(2 * math.pi * cycles_exchange * t / time_steps) for t in range(time_steps)]
+            
+            elif exchange_pattern_type == "Random Walk":
+                start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=50000.0)
+                volatility_exchange = st.number_input("Exchange Rate Volatility (%)", min_value=0.1, value=2.0)
+                np.random.seed(42)  # For reproducibility
+                
+                # Generate random walk
+                percent_changes = np.random.normal(0, volatility_exchange / 100, time_steps)
+                exchange_rate_path = [start_exchange]
+                for i in range(1, time_steps):
+                    next_value = exchange_rate_path[-1] * (1 + percent_changes[i])
+                    exchange_rate_path.append(max(1.0, next_value))  # Ensure minimum value of 1.0
+            
+            elif exchange_pattern_type == "Step Function":
+                initial_exchange = st.number_input("Initial Exchange Rate (USD)", min_value=1.0, value=30000.0)
+                final_exchange = st.number_input("Final Exchange Rate (USD)", min_value=1.0, value=70000.0)
+                step_point = st.slider("Step Point (% of time steps)", min_value=0, max_value=100, value=50)
+                step_index = int(time_steps * step_point / 100)
+                exchange_rate_path = [initial_exchange] * step_index + [final_exchange] * (time_steps - step_index)
+            
+            st.markdown("---")  # Divider between features
+        
+        # Efficiency Pattern
+        if modify_efficiency:
+            st.markdown("### Efficiency Pattern")
+            efficiency_pattern_type = st.selectbox(
+                "Select Efficiency Pattern",
+                ["Steady", "Linear Increase", "Linear Decrease", "Cyclical", "Random Walk", "Step Function"],
+                key="efficiency_pattern"
+            )
+            
+            if efficiency_pattern_type == "Steady":
+                base_value_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
+                efficiency_path = [base_value_efficiency] * time_steps
+            
+            elif efficiency_pattern_type == "Linear Increase":
+                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.0008)
+                end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=0.0012)
+                efficiency_path = np.linspace(start_efficiency, end_efficiency, time_steps).tolist()
+            
+            elif efficiency_pattern_type == "Linear Decrease":
                 start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.0012)
                 end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=0.0008)
                 efficiency_path = np.linspace(start_efficiency, end_efficiency, time_steps).tolist()
             
-            if modify_electricity_cost:
+            elif efficiency_pattern_type == "Cyclical":
+                base_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
+                amplitude_efficiency = st.number_input("Efficiency Amplitude", min_value=0.0, value=0.0002)
+                cycles_efficiency = st.number_input("Number of Complete Cycles (Efficiency)", min_value=0.1, value=3.0)
+                efficiency_path = [base_efficiency + amplitude_efficiency * math.sin(2 * math.pi * cycles_efficiency * t / time_steps) for t in range(time_steps)]
+            
+            elif efficiency_pattern_type == "Random Walk":
+                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.001)
+                volatility_efficiency = st.number_input("Efficiency Volatility (%)", min_value=0.1, value=2.0)
+                np.random.seed(43)  # Different seed from exchange rate
+                
+                # Generate random walk
+                percent_changes = np.random.normal(0, volatility_efficiency / 100, time_steps)
+                efficiency_path = [start_efficiency]
+                for i in range(1, time_steps):
+                    next_value = efficiency_path[-1] * (1 + percent_changes[i])
+                    efficiency_path.append(max(0.0001, next_value))  # Ensure minimum value
+            
+            elif efficiency_pattern_type == "Step Function":
+                initial_efficiency = st.number_input("Initial Efficiency", min_value=0.0001, value=0.0008)
+                final_efficiency = st.number_input("Final Efficiency", min_value=0.0001, value=0.0012)
+                step_point_eff = st.slider("Step Point (% of time steps) - Efficiency", min_value=0, max_value=100, value=50)
+                step_index_eff = int(time_steps * step_point_eff / 100)
+                efficiency_path = [initial_efficiency] * step_index_eff + [final_efficiency] * (time_steps - step_index_eff)
+            
+            st.markdown("---")  # Divider between features
+        
+        # Electricity Cost Pattern
+        if modify_electricity_cost:
+            st.markdown("### Electricity Cost Pattern")
+            electricity_pattern_type = st.selectbox(
+                "Select Electricity Cost Pattern",
+                ["Steady", "Linear Increase", "Linear Decrease", "Cyclical", "Random Walk", "Step Function"],
+                key="electricity_pattern"
+            )
+            
+            if electricity_pattern_type == "Steady":
+                base_value_electricity = st.number_input("Electricity Cost Base Value (USD/kWh)", min_value=0.01, value=0.15)
+                electricity_cost_path = [base_value_electricity] * time_steps
+            
+            elif electricity_pattern_type == "Linear Increase":
+                start_electricity = st.number_input("Electricity Cost Start Value (USD/kWh)", min_value=0.01, value=0.03)
+                end_electricity = st.number_input("Electricity Cost End Value (USD/kWh)", min_value=0.01, value=0.07)
+                electricity_cost_path = np.linspace(start_electricity, end_electricity, time_steps).tolist()
+            
+            elif electricity_pattern_type == "Linear Decrease":
                 start_electricity = st.number_input("Electricity Cost Start Value (USD/kWh)", min_value=0.01, value=0.07)
                 end_electricity = st.number_input("Electricity Cost End Value (USD/kWh)", min_value=0.01, value=0.03)
                 electricity_cost_path = np.linspace(start_electricity, end_electricity, time_steps).tolist()
             
-        elif pattern_type == "Cyclical":
-            if modify_exchange_rate:
-                base_exchange = st.number_input("Exchange Rate Base Value (USD)", min_value=1.0, value=50000.0)
-                amplitude_exchange = st.number_input("Exchange Rate Amplitude (USD)", min_value=0.0, value=20000.0)
-                periods_exchange = st.number_input("Number of Exchange Rate Cycles", min_value=0.5, value=2.0, step=0.5)
-                t = np.linspace(0, 2*np.pi*periods_exchange, time_steps)
-                exchange_rate_path = (base_exchange + amplitude_exchange * np.sin(t)).tolist()
-            
-            if modify_efficiency:
-                base_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
-                amplitude_efficiency = st.number_input("Efficiency Amplitude", min_value=0.0, value=0.0002)
-                periods_efficiency = st.number_input("Number of Efficiency Cycles", min_value=0.5, value=1.5, step=0.5)
-                t = np.linspace(0, 2*np.pi*periods_efficiency, time_steps)
-                efficiency_path = (base_efficiency + amplitude_efficiency * np.sin(t)).tolist()
-            
-            if modify_electricity_cost:
+            elif electricity_pattern_type == "Cyclical":
                 base_electricity = st.number_input("Electricity Cost Base Value (USD/kWh)", min_value=0.01, value=0.05)
                 amplitude_electricity = st.number_input("Electricity Cost Amplitude (USD/kWh)", min_value=0.0, value=0.02)
-                periods_electricity = st.number_input("Number of Electricity Cost Cycles", min_value=0.5, value=1.0, step=0.5)
-                t = np.linspace(0, 2*np.pi*periods_electricity, time_steps)
-                electricity_cost_path = (base_electricity + amplitude_electricity * np.sin(t)).tolist()
+                cycles_electricity = st.number_input("Number of Complete Cycles (Electricity)", min_value=0.1, value=3.0)
+                electricity_cost_path = [base_electricity + amplitude_electricity * math.sin(2 * math.pi * cycles_electricity * t / time_steps) for t in range(time_steps)]
             
-        elif pattern_type == "Random Walk":
-            seed = st.number_input("Random Seed", min_value=0, value=42)
-            np.random.seed(seed)  # Set the seed for reproducibility
-            
-            if modify_exchange_rate:
-                start_exchange = st.number_input("Exchange Rate Start Value (USD)", min_value=1.0, value=50000.0)
-                volatility_exchange = st.number_input("Exchange Rate Volatility (%)", min_value=0.1, value=5.0)
-                
-                # Generate random walk path for exchange rate
-                exchange_rate_path = [start_exchange]
-                for _ in range(time_steps-1):
-                    change = exchange_rate_path[-1] * (volatility_exchange/100) * np.random.randn()
-                    exchange_rate_path.append(max(1.0, exchange_rate_path[-1] + change))
-            
-            if modify_efficiency:
-                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.001)
-                volatility_efficiency = st.number_input("Efficiency Volatility (%)", min_value=0.1, value=3.0)
-                
-                # Generate random walk path for efficiency
-                efficiency_path = [start_efficiency]
-                for _ in range(time_steps-1):
-                    change = efficiency_path[-1] * (volatility_efficiency/100) * np.random.randn()
-                    efficiency_path.append(max(0.0001, efficiency_path[-1] + change))
-            
-            if modify_electricity_cost:
+            elif electricity_pattern_type == "Random Walk":
                 start_electricity = st.number_input("Electricity Cost Start Value (USD/kWh)", min_value=0.01, value=0.05)
                 volatility_electricity = st.number_input("Electricity Cost Volatility (%)", min_value=0.1, value=2.0)
+                np.random.seed(44)  # Different seed from others
                 
-                # Generate random walk path for electricity cost
+                # Generate random walk
+                percent_changes = np.random.normal(0, volatility_electricity / 100, time_steps)
                 electricity_cost_path = [start_electricity]
-                for _ in range(time_steps-1):
-                    change = electricity_cost_path[-1] * (volatility_electricity/100) * np.random.randn()
-                    electricity_cost_path.append(max(0.01, electricity_cost_path[-1] + change))
-        
-        elif pattern_type == "Step Function":
-            if modify_exchange_rate:
-                base_exchange = st.number_input("Exchange Rate Base Value (USD)", min_value=1.0, value=50000.0)
-                step_size_exchange = st.number_input("Exchange Rate Step Size (USD)", min_value=0.0, value=10000.0)
-                step_points_exchange = st.multiselect(
-                    "Exchange Rate Step Points (time steps)",
-                    options=list(range(time_steps)),
-                    default=[int(time_steps/3), int(2*time_steps/3)]
-                )
-                exchange_rate_path = [base_exchange] * time_steps
-                for step in step_points_exchange:
-                    for i in range(step, time_steps):
-                        exchange_rate_path[i] += step_size_exchange
+                for i in range(1, time_steps):
+                    next_value = electricity_cost_path[-1] * (1 + percent_changes[i])
+                    electricity_cost_path.append(max(0.01, next_value))  # Ensure minimum value
             
-            if modify_efficiency:
-                base_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
-                step_size_efficiency = st.number_input("Efficiency Step Size", min_value=0.0, value=0.0002)
-                step_points_efficiency = st.multiselect(
-                    "Efficiency Step Points (time steps)",
-                    options=list(range(time_steps)),
-                    default=[int(time_steps/4), int(3*time_steps/4)]
-                )
-                efficiency_path = [base_efficiency] * time_steps
-                for step in step_points_efficiency:
-                    for i in range(step, time_steps):
-                        efficiency_path[i] += step_size_efficiency
-            
-            if modify_electricity_cost:
-                base_electricity = st.number_input("Electricity Cost Base Value (USD/kWh)", min_value=0.01, value=0.05)
-                step_size_electricity = st.number_input("Electricity Cost Step Size (USD/kWh)", min_value=0.0, value=0.02)
-                step_points_electricity = st.multiselect(
-                    "Electricity Cost Step Points (time steps)",
-                    options=list(range(time_steps)),
-                    default=[int(time_steps/2)]
-                )
-                electricity_cost_path = [base_electricity] * time_steps
-                for step in step_points_electricity:
-                    for i in range(step, time_steps):
-                        electricity_cost_path[i] += step_size_electricity
+            elif electricity_pattern_type == "Step Function":
+                initial_electricity = st.number_input("Initial Electricity Cost (USD/kWh)", min_value=0.01, value=0.03)
+                final_electricity = st.number_input("Final Electricity Cost (USD/kWh)", min_value=0.01, value=0.07)
+                step_point_elec = st.slider("Step Point (% of time steps) - Electricity", min_value=0, max_value=100, value=50)
+                step_index_elec = int(time_steps * step_point_elec / 100)
+                electricity_cost_path = [initial_electricity] * step_index_elec + [final_electricity] * (time_steps - step_index_elec)
 
 with tab2:
     st.subheader("Upload CSV Data")
@@ -276,8 +288,6 @@ with tab2:
             exchange_rate_path = [50000.0] * time_steps
             efficiency_path = [0.001] * time_steps
             electricity_cost_path = [0.05] * time_steps
-
-# Replace the visualization section (around line 257-280) with this code:
 
 # Combine custom and default paths
 # For exchange rate

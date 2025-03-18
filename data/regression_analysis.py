@@ -285,7 +285,7 @@ def run_lasso_regression(df, manual_alpha=None):
         # Calculate condition number for non-zero features
         selected = [i for i, coef in enumerate(lasso.coef_) if abs(coef) > 1e-5]
         if len(selected) >= 2:  # Need at least 2 features to calculate condition number
-            X_selected = X.iloc[:, selected]
+            X_selected = X.iloc[:, selected].to_numpy()
             condition_numbers.append(np.linalg.cond(X_selected))
         else:
             condition_numbers.append(np.nan)
@@ -405,11 +405,11 @@ def plot_lasso_path(lasso_results):
     plt.figure(figsize=(14, 8))
     
     # Convert to array for easier plotting
-    coefs = np.array(coefs)
+    coef_array = np.array(coefs)
     
     # Plot each coefficient progression
     for i, feature in enumerate(feature_names):
-        plt.plot(-np.log10(alphas), coefs[:, i], label=feature)
+        plt.plot(-np.log10(alphas), coef_array[:, i], label=feature)
     
     # Add vertical line at the selected alpha
     optimal_alpha = lasso_results['optimal_alpha']
