@@ -7,6 +7,5 @@ pillow==9.0.0
 streamlit==1.8.0
 pytest==7.0.0
 requests==2.27.1
-statsmodels==0.13.2
 python-dotenv==0.19.2
 pyarrow==7.0.0
