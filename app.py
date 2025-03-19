@@ -6,14 +6,14 @@ from PIL import Image
 from src.models.blockchain import Blockchain
 from src.simulation.engine import run_simulation
 
-st.set_page_config(page_title="Nakamoto Blockchain Simulation", layout="wide", page_icon="💻")
+st.set_page_config(page_title="Targeted Nakamoto Bitcoin Hashrate Control Simulator", layout="wide", page_icon="💻")
 
 # Create columns for title and logo
 title_col, logo_col = st.columns([3, 1])
 
 # Title and subtitle
 with title_col:
-    st.title("Nakamoto Blockchain Simulation")
+    st.title("Targeted Nakamoto Bitcoin Hashrate Control Simulator")
     st.markdown("*Created by Kristian Praizner & Daniel Aronoff*")
     st.markdown("A control theory approach to Bitcoin hashrate targeting")
 
@@ -121,8 +121,8 @@ with col1:
                 alpha=0.6,
                 linestyle='--',
                 color='red')
-        ax1.set_title('Hashrate over Time')
-        ax1.set_xlabel('Time Steps')
+        ax1.set_title('Actual vs Predicted Hashrate (1-1-2024 to 3-8-2025)')
+        ax1.set_xlabel('Time Steps (days)')
         ax1.set_ylabel('Hashrate')
         ax1.axhline(y=upper_bound, color='r', linestyle='--', label='Upper Bound')
         ax1.axhline(y=lower_bound, color='g', linestyle='--', label='Lower Bound')
@@ -138,8 +138,8 @@ with col1:
                 alpha=0.6,
                 linestyle='--',
                 color='blue')
-        ax2.set_title('Miners Block Reward over Time')
-        ax2.set_xlabel('Time Steps')
+        ax2.set_title('Miners Block Reward over Time (1-1-2024 to 3-8-2025)')
+        ax2.set_xlabel('Time Steps (days)')
         ax2.set_ylabel('Block Reward (log scale)')
         ax2.set_yscale('log')
         ax2.grid(True)

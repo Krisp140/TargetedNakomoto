@@ -403,7 +403,7 @@ if st.button("Run Simulation with Custom Data"):
             linestyle='--',
             color='red')
     ax1.set_title('Hashrate over Time')
-    ax1.set_xlabel('Time Steps')
+    ax1.set_xlabel('Time Steps (days)')
     ax1.set_ylabel('Hashrate')
     ax1.axhline(y=upper_bound, color='r', linestyle='--', label='Upper Bound')
     ax1.axhline(y=lower_bound, color='g', linestyle='--', label='Lower Bound')
@@ -420,7 +420,7 @@ if st.button("Run Simulation with Custom Data"):
             linestyle='--',
             color='blue')
     ax2.set_title('Miners Block Reward over Time')
-    ax2.set_xlabel('Time Steps')
+    ax2.set_xlabel('Time Steps (days)')
     ax2.set_ylabel('Block Reward (log scale)')
     ax2.set_yscale('log')
     ax2.grid(True)
