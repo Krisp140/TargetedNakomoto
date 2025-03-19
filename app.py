@@ -121,7 +121,7 @@ with col1:
                 alpha=0.6,
                 linestyle='--',
                 color='red')
-        ax1.set_title('Actual vs Predicted Hashrate (1-1-2024 to 3-8-2025)')
+        ax1.set_title('Actual vs Predicted Hashrate (1-1-2022 to 3-8-2025)')
         ax1.set_xlabel('Time Steps (days)')
         ax1.set_ylabel('Hashrate')
         ax1.axhline(y=upper_bound, color='r', linestyle='--', label='Upper Bound')
@@ -138,7 +138,7 @@ with col1:
                 alpha=0.6,
                 linestyle='--',
                 color='blue')
-        ax2.set_title('Miners Block Reward over Time (1-1-2024 to 3-8-2025)')
+        ax2.set_title('Miners Block Reward over Time (1-1-2022 to 3-8-2025)')
         ax2.set_xlabel('Time Steps (days)')
         ax2.set_ylabel('Block Reward (log scale)')
         ax2.set_yscale('log')
