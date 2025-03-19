@@ -64,8 +64,8 @@ st.header("Key Components")
 st.subheader("1. Target Bounds")
 st.markdown("""
 The simulation maintains the hashrate within specified bounds: The mean hashrate can be chosen by the user
-- **Upper Bound**: Maximum acceptable hashrate (as % of mean actual hashrate)
-- **Lower Bound**: Minimum acceptable hashrate (as % of mean actual hashrate)
+- **Target Hashrate**: The mean hashrate can be chosen by the user
+- **Range**: The % range of the hashrate serves as the upper and lower bounds
 """)
 st.subheader("2. Control Parameters")
 st.markdown("""
