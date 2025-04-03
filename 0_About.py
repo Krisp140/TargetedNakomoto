@@ -4,6 +4,21 @@ import os
 import pandas as pd
 st.set_page_config(page_title="About - Hashrate Control Simulation", layout="wide", page_icon="💻")
 
+# Inject custom CSS to make the mobile sidebar button larger
+st.markdown("""
+<style>
+/* Target the Streamlit sidebar toggle button - adjust selector if needed */
+button[kind="header"] {
+    padding: 1rem; /* Increase padding */
+}
+
+button[kind="header"] svg {
+    width: 2rem;   /* Increase width */
+    height: 2rem;  /* Increase height */
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("About the Hashrate Control Simulation")
 
 st.header("Overview")

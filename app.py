@@ -1,269 +1,178 @@
 import streamlit as st
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 from PIL import Image
-from src.models.blockchain import Blockchain
-from src.simulation.engine import run_simulation
+import os
+import pandas as pd
+st.set_page_config(page_title="About - Hashrate Control Simulation", layout="wide", page_icon="💻")
 
-st.set_page_config(page_title="Targeted Nakamoto Bitcoin Hashrate Control Simulator", layout="wide", page_icon="💻")
+# Inject custom CSS to make the mobile sidebar button larger
+st.markdown("""
+<style>
+/* Target the Streamlit sidebar toggle button - adjust selector if needed */
+button[kind="header"] {
+    padding: 1rem; /* Increase padding */
+}
 
-# Create columns for title and logo
-title_col, logo_col = st.columns([3, 1])
+button[kind="header"] svg {
+    width: 2rem;   /* Increase width */
+    height: 2rem;  /* Increase height */
+}
+</style>
+""", unsafe_allow_html=True)
 
-# Title and subtitle
-with title_col:
-    st.title("Targeted Nakamoto Bitcoin Hashrate Control Simulator")
-    st.markdown("*Created by Kristian Praizner & Daniel Aronoff*")
-    st.markdown("A control theory approach to Bitcoin hashrate targeting")
+st.title("About the Hashrate Control Simulation")
 
-with logo_col:
-    # Open and crop the image
-    image = Image.open('static/mit.jpg')
-    # Get current dimensions
-    width, height = image.size
-    # Crop from the bottom (adjust the 0.8 factor to crop more or less)
-    #cropped_image = image.crop((0, int(height * 0.5), width, int(height * 0.5)))
-    st.image(image)
+st.header("Overview")
+st.write("""
+This simulation demonstrates a novel approach to Bitcoin hashrate adjustment using control theory principles.
+The model implements a feedback control system that aims to maintain the network hashrate within specified bounds
+while adapting to changing market conditions. The estimation equation is based on equation 4 from https://arxiv.org/abs/2405.15089
+""")
+st.header("Key Formulas")
 
-# Sample data for simulation
-data = pd.read_csv('data/merged_data.csv')
-hashrate = data['HashRate'].tolist()
-e_path = data['BTCPrice'].tolist()  # Exchange rate path
-time_steps = len(e_path)
-efficiency_path = data['Efficiency'].tolist()     # Efficiency path
-electricity_cost_path = data['ElectricityPrice'].tolist()  # Electricity cost path
-block_reward_path = data['BTC'].tolist()
-#fee_path = data['fees'].tolist()
+st.subheader("Original Hashrate Adjustment (with logs)(1)(2)")
+st.latex(r"""
+\widehat{N_{t}} = \alpha_1  +  \alpha_2 \widehat{e P_{t}} +  \alpha_3 \widehat{\eta} +  \alpha_4 \widehat{c} +  \alpha_5 \widehat{\Delta \text{T}}
+""")
+st.write("Where:")
+st.markdown("""
+- $N_{t}$ is the predicted hashrate
+- $e$ is the btc/usd exchange rate
+- $\eta$ is the mining efficiency
+- $c$ is the electricity cost
+- $\Delta {T}$ is the deviation in block speed from target block time (10 minutes)
+- $t$ is epoch (2016 blocks)
+""")
 
-# Sidebar for parameters
-# Add Bitcoin logo at the top of the sidebar
-st.sidebar.image("static/btc2.png", width=100, use_column_width=True)
-st.sidebar.markdown("---")  # Add a divider line after the logo
+st.write("Resultant Prediction:")
+image = Image.open(os.path.join("data", "old_model.png"))
+st.image(image, caption="Original Hashrate Prediction")
 
-st.sidebar.header("Control Parameters")
-tau = st.sidebar.number_input("Tau", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
-gamma = st.sidebar.number_input("Gamma", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
+st.write("However this model has a condition number of 235, indicating potential issues with multicollinearity. Therefore we run a lasso regression and find this:")
+image = Image.open(os.path.join("data", "reg_path.png"))
+st.image(image, caption="Lasso Regression")
 
-st.sidebar.header("Target Bounds")
-# Calculate mean hashrate for default value
-mean_hashrate = float(data['HashRate'].mean())
+st.write("Based on the Lasso results, we remove the electricity and block speed variables from the model.")
+st.write("Resultant Prediction:")
+image = Image.open(os.path.join("data", "new_model.png"))
+st.image(image, caption="New Hashrate Prediction")
 
-# Extract significant digits and exponent
-sig_figs, exponent = "{:.3e}".format(mean_hashrate).split('e')
-sig_figs = float(sig_figs)
-exponent = int(exponent)
+st.subheader("New Hashrate Adjustment (with logs)(3)")
+st.latex(r"""
+\widehat{N_{t}} = \alpha_1  +  \alpha_2 \widehat{e P_{t}} +  \alpha_3 \widehat{\eta}
+""")
+st.write("Where:")
+st.markdown("""
+- $N_{t}$ is the predicted hashrate
+- $e$ is the btc/usd exchange rate
+- $\eta$ is the mining efficiency
+""")
+st.write("And the alphas are:")
+st.latex(r"""
+\alpha_1 = 45.6767\\
+\alpha_2 = 0.4108\\
+\alpha_3 = -1.5100
+""")
+st.write("And the condition number changes: 235.42 → 60.02")
 
-# Create input for significant figures only
-sig_fig_input = st.sidebar.number_input(
-    f"Target Hashrate (×10^{exponent})", 
-    min_value=0.1, 
-    max_value=9.99,
-    value=sig_figs,
-    format="%.3f",
-    help="Enter the significant figures of the target hashrate"
-)
+st.header("Key Components")
 
-# Convert back to full hashrate
-target_hashrate = sig_fig_input * (10 ** exponent)
+st.subheader("1. Target Bounds")
+st.markdown("""
+The simulation maintains the hashrate within specified bounds: The mean hashrate can be chosen by the user
+- **Target Hashrate**: The mean hashrate can be chosen by the user
+- **Range**: The % range of the hashrate serves as the upper and lower bounds
+""")
+st.subheader("2. Control Parameters")
+st.markdown("""
+- **Tau (τ)**: The control parameter that determines the responsiveness of the system outside the bounds. 
+  - Range: 0 to 1, symmetric to floor/ceiling
+  - Higher values make the system more responsive but potentially less stable
+  - Lower values make the system more stable but slower to respond
 
-# Input field for range percentage with 10% as default
-range_percent = st.sidebar.number_input(
-    "Range (% of target hashrate)", 
-    min_value=1.0, 
-    max_value=100.0, 
-    value=10.0, 
-    step=1.0,
-    help="Range as a percentage of the target hashrate"
-)
+- **Gamma (γ)**: The control parameter that influences the strength of the correction inside the bounds.
+  - Range: 0 to 1, symmetric to floor/ceiling
+  - Lower values result in stronger corrections
+  - Higher values result in gentler adjustments
+""")
 
-# Calculate upper and lower bounds based on target and range
-upper_bound = target_hashrate * (1 + range_percent / 100.0)
-lower_bound = target_hashrate * (1 - range_percent / 100.0)
+st.header("Performance Metrics")
+st.markdown("""
+The simulation evaluates performance using several metrics:
+1. **Hashrate Volatility**: Standard deviation of hashrate divided by mean
+2. **Time in Bounds**: Percentage of time the hashrate stays within target bounds
+""")
 
-# Display the actual values
-st.sidebar.text(f"Upper Bound: {upper_bound:.2e}")
-st.sidebar.text(f"Lower Bound: {lower_bound:.2e}")
+st.header("Data Sources")
+st.markdown("""
+The simulation uses historical Bitcoin network data including:
 
-# Main content
-col1, col2 = st.columns([3, 1])
+- Network hashrate (TH/s) (https://bitcoinvisuals.com/)
+- Bitcoin price ($) (https://bitcoinvisuals.com/)
+- Mining efficiency (Th/kWh) (https://ccaf.io/)
+- Electricity costs ($/kWh) (https://www.ercot.com/gridinfo/load/load_hist (Texas))
+- Block speed (s) (https://bitcoinvisuals.com/)
+""")
 
-with col1:
-    st.header("Simulation Results")
-    if st.button("Run Simulation"):
-        # Prepare simulation parameters
-        sim_params = {
-            'tau': tau,
-            'gamma': gamma,
-            'upper_bound': upper_bound,
-            'lower_bound': lower_bound,
-            'initial_hashrate': hashrate[0],
-            'initial_block_reward': block_reward_path[0],
-            'time_steps': time_steps,
-            'time_paths': {
-                'exchange_rate': e_path,
-                'efficiency': efficiency_path,
-                'electricity_cost': electricity_cost_path
-            }
-        }
-        
-        # Run simulation
-        results = run_simulation(sim_params)
-        
-        # Create visualization
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-        
-        # Plot hashrate
-        ax1.plot(results['hashrate'], label='Simulated Hashrate', color='blue')
-        ax1.plot(hashrate[:time_steps], 
-                label='Actual Hashrate',
-                marker='x',
-                alpha=0.6,
-                linestyle='--',
-                color='red')
-        ax1.set_title('Actual vs Predicted Hashrate (1-1-2022 to 3-8-2025)')
-        ax1.set_xlabel('Time Steps (days)')
-        ax1.set_ylabel('Hashrate')
-        ax1.axhline(y=upper_bound, color='r', linestyle='--', label='Upper Bound')
-        ax1.axhline(y=lower_bound, color='g', linestyle='--', label='Lower Bound')
-        ax1.grid(True)
-        ax1.set_yscale('log')
-        ax1.legend()
-        
-        # Plot block rewards
-        ax2.plot(results['block_reward'], label='Block Reward', color='orange')
-        ax2.plot(block_reward_path[:time_steps], 
-                label='Actual Block Reward',
-                marker='x',
-                alpha=0.6,
-                linestyle='--',
-                color='blue')
-        ax2.set_title('Miners Block Reward over Time (1-1-2022 to 3-8-2025)')
-        ax2.set_xlabel('Time Steps (days)')
-        ax2.set_ylabel('Block Reward (log scale)')
-        ax2.set_yscale('log')
-        ax2.grid(True)
-        ax2.legend()
-        
-        plt.tight_layout()
-        st.pyplot(fig)
-        
-        # Display statistics
-        with col2:
-            st.header("Statistics")
-            
-            # Current Values
-            st.subheader("Current Values")
-            st.metric("Final Hashrate", f"{results['hashrate'][-1]:.2e} H/s")
-            st.metric("Final Block Reward (per day)", f"{results['block_reward'][-1]:.2f}")
-            st.metric("Number of Epochs", results['epochs'])
-            
-            # Volatility Metrics
-            st.subheader("Volatility Metrics")
-            st.metric("Hashrate Volatility: (std / mean)", f"{results['stats']['hashrate_volatility']:.2f}%")
-            
-            # Performance Metrics
-            st.subheader("Performance Metrics")
-            st.metric("Time in Bounds", f"{results['stats']['bound_adherence']:.1f}%")
+st.header("Footnotes")
+st.markdown("""
+(1) We tested several different lag structures for the hashrate adjustment model and found that using the current period was the most robust.
+""")
 
-# Add parameter sweep analysis functionality
-if st.button("Run Parameter Sweep Analysis"):
-    st.write("Running parameter sweep analysis... This may take a few minutes.")
-    
-    # Define the range of parameters to test
-    tau_range = np.linspace(0.1, 1.0, 10)
-    gamma_range = np.linspace(0.1, 1.0, 10)
-    
-    # Create meshgrid for 3D plot
-    TAU, GAMMA = np.meshgrid(tau_range, gamma_range)
-    TIME_IN_BOUNDS = np.zeros_like(TAU)
-    
-    # Progress bar
-    progress_bar = st.progress(0)
-    total_iterations = len(tau_range) * len(gamma_range)
-    current_iteration = 0
-    
-    # Evaluate each combination
-    for i, tau_val in enumerate(tau_range):
-        for j, gamma_val in enumerate(gamma_range):
-            # Initialize blockchain with current parameters
-            blockchain = Blockchain(
-                tau=tau_val,
-                gamma=gamma_val,
-                upper_bound=upper_bound,
-                lower_bound=lower_bound,
-                initial_difficulty=1e12
-            )
-            
-            # Run simulation
-            N = [float(hashrate[0])]
-            P = [float(block_reward_path[0])]
-            
-            for t in range(time_steps):
-                current_N = N[-1]
-                current_P = P[-1]
-                
-                # Adjust reward within the epoch
-                adjusted_reward = blockchain.adjust_reward(current_P, len(blockchain.epochs) - 1)
-                
-                # Get current values from time paths
-                e_current = e_path[t]
-                efficiency_current = efficiency_path[t]
-                electricity_cost_current = electricity_cost_path[t]
-                
-                # Update hashrate
-                new_N = blockchain.adjust_hashrate(
-                    current_N,
-                    len(blockchain.epochs) - 1,
-                    e_current,
-                    current_P,
-                    efficiency_current,
-                    electricity_cost_current
-                )
-                N.append(new_N)
-                P.append(adjusted_reward)
-                blockchain.DT = new_N
-                current_N = new_N
-                current_P = adjusted_reward
-                
-                # Check for epoch end (every 14 blocks in your case)
-                if t > 0 and t % 14 == 0:
-                    blockchain.end_of_epoch()
-            # Calculate time in bounds metric
-            in_bounds = sum(1 for n in N if lower_bound <= n <= upper_bound)
-            time_in_bounds_percent = (in_bounds / len(N)) * 100
-            TIME_IN_BOUNDS[j, i] = time_in_bounds_percent
-            
-            # Update progress
-            current_iteration += 1
-            progress_bar.progress(current_iteration / total_iterations)
-    
-    # Create 3D plot
-    fig = plt.figure(figsize=(6, 4))
-    ax = fig.add_subplot(111, projection='3d')
-    
-    # Plot surface
-    surf = ax.plot_surface(TAU, GAMMA, TIME_IN_BOUNDS, cmap='viridis')
-    
-    # Customize plot
-    ax.set_xlabel('Tau')
-    ax.set_ylabel('Gamma')
-    #ax.set_zlabel('Time in Bounds (%)')
-    ax.set_title('Parameter Sweep Analysis')
-    
-    # Add colorbar
-    fig.colorbar(surf, ax=ax, label='Time in Bounds (%)')
-    
-    # Display plot in Streamlit
-    st.pyplot(fig)
-    
-    # Find optimal parameters
-    max_idx = np.unravel_index(np.argmax(TIME_IN_BOUNDS), TIME_IN_BOUNDS.shape)
-    optimal_tau = tau_range[max_idx[1]]
-    optimal_gamma = gamma_range[max_idx[0]]
-    max_time_in_bounds = TIME_IN_BOUNDS[max_idx]
-    
-    st.write(f"Optimal Parameters:")
-    st.write(f"Tau: {optimal_tau:.2f}")
-    st.write(f"Gamma: {optimal_gamma:.2f}")
-    st.write(f"Maximum Time in Bounds: {max_time_in_bounds:.2f}%")
+st.markdown("""
+**(2) OLS Regression Summary:**  
+- Dependent Variable: log_hashrate_forward
+- R-squared: 0.970
+- Adj. R-squared: 0.970
+- F-statistic: 7261
+- No. Observations: 891
+""")
+
+regression_coef = pd.DataFrame({
+    'Variable': ['constant', 'log_eP_forward', 'log_efficiency_forward', 
+                'log_electricity_cost_forward', 'log_block_speed_change_forward'],
+    'Coefficient': [44.9623, 0.4098, -1.4882, 0.2499, 0.0346],
+    'Std Error': [0.404, 0.010, 0.015, 0.095, 0.003],
+    't-value': [111.379, 42.317, -100.872, 2.639, 10.881],
+    'P>|t|': [0.000, 0.000, 0.000, 0.008, 0.000],
+    '95% CI Lower': [44.170, 0.391, -1.517, 0.064, 0.028],
+    '95% CI Upper': [45.755, 0.429, -1.459, 0.436, 0.041]
+})
+
+st.dataframe(regression_coef)
+
+st.markdown("""
+**Statistical Tests:**
+- Durbin-Watson: 0.254 (indicates positive autocorrelation)
+- Condition Number: 2.67e+03 (might indicate multicollinearity)
+""")
+
+st.markdown("""
+**(3) Regression Results with Selected Features:**
+""")
+
+st.markdown("""
+**OLS Regression Summary:**  
+- Dependent Variable: log_hashrate_forward
+- R-squared: 0.966
+- Adj. R-squared: 0.966
+- F-statistic: 1.255e+04
+- No. Observations: 892
+""")
+
+selected_regression_coef = pd.DataFrame({
+    'Variable': ['constant', 'log_eP_forward', 'log_efficiency_forward'],
+    'Coefficient': [45.6767, 0.4108, -1.5100],
+    'Std Error': [0.163, 0.009, 0.011],
+    't-value': [279.711, 47.316, -135.745],
+    'P>|t|': [0.000, 0.000, 0.000],
+    '95% CI Lower': [45.356, 0.394, -1.532],
+    '95% CI Upper': [45.997, 0.428, -1.488]
+})
+
+st.dataframe(selected_regression_coef)
+
+st.markdown("""
+**Statistical Tests:**
+- Durbin-Watson: 0.516 (improved, but still indicates autocorrelation)
+- Condition Number: 974 (significantly improved from the original model)
+""")

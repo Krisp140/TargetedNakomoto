@@ -1,0 +1,7 @@
+> generate estimate of electricity cost and (i) report a average $/block (or something like that) in our results and 
+(ii) enable  targeting of a range of that variable.
+
+> generate estimate of electricity consumption and(i) report a average Kw/block (or something like that) in our results  
+(ii) enable  targeting of a range of that variable.
+
+> Adjust to 3 cases from paper
