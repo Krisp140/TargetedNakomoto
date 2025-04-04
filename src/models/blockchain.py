@@ -101,13 +101,12 @@ class Blockchain:
             new_epoch.ceil = (self.tau) * P_B_median
             new_epoch.floor = None  # Clear any existing floor
     
-        # Case 2 & 4: Hashrate within bounds - gradual adjustment
+        # Case 2: Hashrate within bounds - gradual adjustment
         elif self.DT_N_LB < self.DT < self.DT_N_UB:
             
-            # Case 2: Previous epoch had a ceiling
+            # Previous epoch had a ceiling
             if last_epoch.ceil is not None:
                 if last_epoch.ceil >= self.DT:
-                    print("Case 2: Hashrate in bounds and ceiling is being relaxed")
                     # Gradually relax the ceiling
                     new_epoch.ceil =  (1+self.gamma) * last_epoch.ceil
                     print("Old ceiling: " + str(last_epoch.ceil))
@@ -116,10 +115,9 @@ class Blockchain:
                     # Remove ceiling if it's no longer needed
                     new_epoch.ceil = None
             
-            # Case 4: Previous epoch had a floor
+            # Previous epoch had a floor
             elif last_epoch.floor is not None:
                 if last_epoch.floor <= self.DT:
-                    print("Case 4: Hashrate in bound and floor is being relaxed")
                     # Gradually relax the floor
                     new_epoch.ceil = (self.gamma) * last_epoch.floor
                     print("Old floor: " + str(last_epoch.floor))

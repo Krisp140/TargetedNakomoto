@@ -2,26 +2,17 @@ import streamlit as st
 from PIL import Image
 import os
 import pandas as pd
-st.set_page_config(page_title="About - Hashrate Control Simulation", layout="wide", page_icon="💻")
+st.set_page_config(page_title="About - Hashrate Control Simulation", layout="wide", page_icon="💻", initial_sidebar_state="auto")
 
-# Inject custom CSS to make the mobile sidebar button larger
-st.markdown("""
-<style>
-/* Target the Streamlit sidebar toggle button - adjust selector if needed */
-button[kind="header"] {
-    padding: 1rem; /* Increase padding */
-}
-
-button[kind="header"] svg {
-    width: 2rem;   /* Increase width */
-    height: 2rem;  /* Increase height */
-}
-</style>
-""", unsafe_allow_html=True)
+# Override the auto-generated sidebar name
+st.sidebar.header("About")
 
 st.title("About the Hashrate Control Simulation")
 
+st.markdown("*Created by Kristian Praizner & Daniel Aronoff*")
+st.markdown("**Contact:** [kpraiznr@mit.edu](mailto:kpraiznr@mit.edu) | Mentor: [daronoff@mit.edu](mailto:daronoff@mit.edu)")
 st.header("Overview")
+
 st.write("""
 This simulation demonstrates a novel approach to Bitcoin hashrate adjustment using control theory principles.
 The model implements a feedback control system that aims to maintain the network hashrate within specified bounds
