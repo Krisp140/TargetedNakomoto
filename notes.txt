@@ -5,3 +5,14 @@
 (ii) enable  targeting of a range of that variable.
 
 > Adjust to 3 cases from paper
+
+
+TODO:::
+> FIX COST CALCULATION per block (hashrate * seconds between blocks * kwh/Th * $/kwh) ##
+    > Baseline vs. Adjusted ##
+> Change sweep minutes tot seconds ##
+> Reward:: change to per block and multiply by exchange rate ##
+> "Final Adjusted Hashrate" ##
+> Sliding window on playground ##
+> Block fee optional paramater (hard)
+> Create bounds for elect cost and consumption along with hashrate ##

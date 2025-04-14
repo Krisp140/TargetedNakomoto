@@ -43,6 +43,9 @@ tau = st.sidebar.number_input("Tau", min_value=0.0, max_value=1.0, value=0.1, st
 gamma = st.sidebar.number_input("Gamma", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
 
 st.sidebar.header("Target Bounds")
+# Add toggle for setting bounds by electricity cost instead of hashrate
+use_electricity_cost_bounds = st.sidebar.checkbox("Set bounds by electricity cost instead of hashrate", value=False)
+
 # Calculate mean hashrate for default value
 mean_hashrate = float(default_data['HashRate'].mean())
 
@@ -51,44 +54,121 @@ sig_figs, exponent = "{:.3e}".format(mean_hashrate).split('e')
 sig_figs = float(sig_figs)
 exponent = int(exponent)
 
-# Create input for significant figures only
-sig_fig_input = st.sidebar.number_input(
-    f"Target Hashrate (×10^{exponent})", 
-    min_value=0.1, 
-    max_value=9.99,
-    value=sig_figs,
-    format="%.3f",
-    help="Enter the significant figures of the target hashrate"
-)
+# Calculate mean electricity cost equivalent
+block_time_seconds = 10 * 60  # 10 minutes in seconds
+current_efficiency = default_efficiency_path[-1]  # J/TH
+current_electricity_cost = default_electricity_cost_path[-1]  # $/kWh
+joules_to_kwh = 2.78e-7
+hashrate_in_th = mean_hashrate / 1e12
 
-# Convert back to full hashrate
-target_hashrate = sig_fig_input * (10 ** exponent)
+# Calculate equivalent electricity cost for mean hashrate
+mean_energy_per_block = hashrate_in_th * block_time_seconds * current_efficiency * joules_to_kwh
+mean_cost_per_block = mean_energy_per_block * current_electricity_cost
 
-# Input field for range percentage with 10% as default
-range_percent = st.sidebar.number_input(
-    "Range (% of target hashrate)", 
-    min_value=1.0, 
-    max_value=100.0, 
-    value=10.0, 
-    step=1.0,
-    help="Range as a percentage of the target hashrate"
-)
+if not use_electricity_cost_bounds:
+    # Create input for significant figures only (hashrate mode)
+    sig_fig_input = st.sidebar.number_input(
+        f"Target Hashrate (×10^{exponent})", 
+        min_value=0.1, 
+        max_value=9.99,
+        value=sig_figs,
+        format="%.3f",
+        help="Enter the significant figures of the target hashrate"
+    )
 
-# Calculate upper and lower bounds based on target and range
-upper_bound = target_hashrate * (1 + range_percent / 100.0)
-lower_bound = target_hashrate * (1 - range_percent / 100.0)
+    # Convert back to full hashrate
+    target_hashrate = sig_fig_input * (10 ** exponent)
 
-# Display the actual values
-st.sidebar.text(f"Upper Bound: {upper_bound:.2e}")
-st.sidebar.text(f"Lower Bound: {lower_bound:.2e}")
+    # Input field for range percentage with 10% as default
+    range_percent = st.sidebar.number_input(
+        "Range (% of target hashrate)", 
+        min_value=1.0, 
+        max_value=100.0, 
+        value=10.0, 
+        step=1.0,
+        help="Range as a percentage of the target hashrate"
+    )
+
+    # Calculate upper and lower bounds based on target and range
+    upper_bound = target_hashrate * (1 + range_percent / 100.0)
+    lower_bound = target_hashrate * (1 - range_percent / 100.0)
+
+    # Display the actual values
+    st.sidebar.text(f"Upper Bound: {upper_bound:.2e} H/s")
+    st.sidebar.text(f"Lower Bound: {lower_bound:.2e} H/s")
+else:
+    # Display inputs for electricity cost instead
+    target_cost_in_millions = st.sidebar.number_input(
+        "Target Electricity Cost per Block ($ millions)", 
+        min_value=0.000001,
+        max_value=1000.0,
+        value=float(f"{mean_cost_per_block / 1000000:.6f}"),
+        format="%.6f",
+        help="Enter the target electricity cost per block in millions of USD"
+    )
+    
+    # Convert from millions to actual dollars for calculations
+    target_cost = target_cost_in_millions * 1000000
+
+    # Input field for range percentage with 10% as default
+    range_percent = st.sidebar.number_input(
+        "Range (% of target cost)", 
+        min_value=1.0, 
+        max_value=100.0, 
+        value=10.0, 
+        step=1.0,
+        help="Range as a percentage of the target electricity cost"
+    )
+
+    # Calculate upper and lower bounds for electricity cost
+    upper_cost_bound = target_cost * (1 + range_percent / 100.0)
+    lower_cost_bound = target_cost * (1 - range_percent / 100.0)
+
+    # Display the cost bounds (in millions)
+    st.sidebar.text(f"Upper Cost Bound: ${upper_cost_bound/1000000:.6f}M")
+    st.sidebar.text(f"Lower Cost Bound: ${lower_cost_bound/1000000:.6f}M")
+    
+    # Convert cost bounds back to hashrate for simulation
+    # Formula: hashrate (TH/s) = cost / (seconds * efficiency * joules_to_kwh * electricity_cost)
+    # Then convert TH/s to H/s by multiplying by 1e12
+    upper_hashrate_th = upper_cost_bound / (block_time_seconds * current_efficiency * joules_to_kwh * current_electricity_cost)
+    lower_hashrate_th = lower_cost_bound / (block_time_seconds * current_efficiency * joules_to_kwh * current_electricity_cost)
+    
+    # Convert to H/s for simulation
+    upper_bound = upper_hashrate_th * 1e12
+    lower_bound = lower_hashrate_th * 1e12
+    
+    # Also set target_hashrate for consistency with the rest of the code
+    target_hashrate = (upper_bound + lower_bound) / 2
+    
+    # Show equivalent hashrate bounds
+    st.sidebar.text(f"Equivalent Upper Hashrate: {upper_bound:.2e} H/s")
+    st.sidebar.text(f"Equivalent Lower Hashrate: {lower_bound:.2e} H/s")
+
 # Parameter selection
 st.header("Select Time Paths to Customize")
 modify_exchange_rate = st.checkbox("Modify Exchange Rate Path", value=True)  # Default selected
 modify_efficiency = st.checkbox("Modify Efficiency Path", value=False)
 modify_electricity_cost = st.checkbox("Modify Electricity Cost Path", value=False)
 
-# Simulation length
-time_steps = st.slider("Simulation Length (time steps)", min_value=10, max_value=1163, value=500)
+# Simulation length - replace the two sliders with a single range slider
+st.subheader("Simulation Window")
+
+# Get the maximum possible time step based on data length
+max_time_step = 1163
+
+# Use a range slider for selecting both start and end points
+start_point, end_point = st.select_slider(
+    "Select time step range",
+    options=range(0, max_time_step + 1),
+    value=(0, min(500, max_time_step))
+)
+
+# Calculate time steps based on the window
+time_steps = end_point - start_point
+
+# Show selected range information
+st.info(f"Selected range: {start_point} to {end_point} (Total: {time_steps} time steps)")
 
 # Method selection tabs
 tab1, tab2 = st.tabs(["Manual Pattern Creation", "Upload CSV Data"])
@@ -171,27 +251,27 @@ with tab1:
             )
             
             if efficiency_pattern_type == "Steady":
-                base_value_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
+                base_value_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=33.)
                 efficiency_path = [base_value_efficiency] * time_steps
             
             elif efficiency_pattern_type == "Linear Increase":
-                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.0008)
-                end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=0.0012)
+                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=10.)
+                end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=30.)
                 efficiency_path = np.linspace(start_efficiency, end_efficiency, time_steps).tolist()
             
             elif efficiency_pattern_type == "Linear Decrease":
-                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.0012)
-                end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=0.0008)
+                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=40.)
+                end_efficiency = st.number_input("Efficiency End Value", min_value=0.0001, value=10.)
                 efficiency_path = np.linspace(start_efficiency, end_efficiency, time_steps).tolist()
-            
+
             elif efficiency_pattern_type == "Cyclical":
-                base_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=0.001)
+                base_efficiency = st.number_input("Efficiency Base Value", min_value=0.0001, value=33.)
                 amplitude_efficiency = st.number_input("Efficiency Amplitude", min_value=0.0, value=0.0002)
                 cycles_efficiency = st.number_input("Number of Complete Cycles (Efficiency)", min_value=0.1, value=3.0)
                 efficiency_path = [base_efficiency + amplitude_efficiency * math.sin(2 * math.pi * cycles_efficiency * t / time_steps) for t in range(time_steps)]
             
             elif efficiency_pattern_type == "Random Walk":
-                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=0.001)
+                start_efficiency = st.number_input("Efficiency Start Value", min_value=0.0001, value=25.)
                 volatility_efficiency = st.number_input("Efficiency Volatility (%)", min_value=0.1, value=2.0)
                 np.random.seed(43)  # Different seed from exchange rate
                 
@@ -203,8 +283,8 @@ with tab1:
                     efficiency_path.append(max(0.0001, next_value))  # Ensure minimum value
             
             elif efficiency_pattern_type == "Step Function":
-                initial_efficiency = st.number_input("Initial Efficiency", min_value=0.0001, value=0.0008)
-                final_efficiency = st.number_input("Final Efficiency", min_value=0.0001, value=0.0012)
+                initial_efficiency = st.number_input("Initial Efficiency", min_value=0.0001, value=10.)
+                final_efficiency = st.number_input("Final Efficiency", min_value=0.0001, value=30.)
                 step_point_eff = st.slider("Step Point (% of time steps) - Efficiency", min_value=0, max_value=100, value=50)
                 step_index_eff = int(time_steps * step_point_eff / 100)
                 efficiency_path = [initial_efficiency] * step_index_eff + [final_efficiency] * (time_steps - step_index_eff)
@@ -296,12 +376,14 @@ if modify_exchange_rate:
     exchange_rate_path_display = exchange_rate_path
     path_type_exchange = "(Custom)"
 else:
-    # Use default data, trimmed or extended to match time_steps
-    if time_steps <= len(default_exchange_rate_path):
-        exchange_rate_path = default_exchange_rate_path[:time_steps]
+    # Use default data within the selected window
+    if end_point <= len(default_exchange_rate_path):
+        exchange_rate_path = default_exchange_rate_path[start_point:end_point]
     else:
-        # Extend with the last value if needed
-        exchange_rate_path = default_exchange_rate_path + [default_exchange_rate_path[-1]] * (time_steps - len(default_exchange_rate_path))
+        # Handle case where end_point exceeds data length
+        available_data = default_exchange_rate_path[start_point:]
+        extension = [default_exchange_rate_path[-1]] * (end_point - len(default_exchange_rate_path))
+        exchange_rate_path = available_data + extension
     exchange_rate_path_display = exchange_rate_path
     path_type_exchange = "(Default Historical Data)"
 
@@ -311,11 +393,14 @@ if modify_efficiency:
     efficiency_path_display = efficiency_path
     path_type_efficiency = "(Custom)"
 else:
-    # Use default data, trimmed or extended to match time_steps
-    if time_steps <= len(default_efficiency_path):
-        efficiency_path = default_efficiency_path[:time_steps]
+    # Use default data within the selected window
+    if end_point <= len(default_efficiency_path):
+        efficiency_path = default_efficiency_path[start_point:end_point]
     else:
-        efficiency_path = default_efficiency_path + [default_efficiency_path[-1]] * (time_steps - len(default_efficiency_path))
+        # Handle case where end_point exceeds data length
+        available_data = default_efficiency_path[start_point:]
+        extension = [default_efficiency_path[-1]] * (end_point - len(default_efficiency_path))
+        efficiency_path = available_data + extension
     efficiency_path_display = efficiency_path
     path_type_efficiency = "(Default Historical Data)"
 
@@ -325,31 +410,52 @@ if modify_electricity_cost:
     electricity_cost_path_display = electricity_cost_path
     path_type_electricity = "(Custom)"
 else:
-    # Use default data, trimmed or extended to match time_steps
-    if time_steps <= len(default_electricity_cost_path):
-        electricity_cost_path = default_electricity_cost_path[:time_steps]
+    # Use default data within the selected window
+    if end_point <= len(default_electricity_cost_path):
+        electricity_cost_path = default_electricity_cost_path[start_point:end_point]
     else:
-        electricity_cost_path = default_electricity_cost_path + [default_electricity_cost_path[-1]] * (time_steps - len(default_electricity_cost_path))
+        # Handle case where end_point exceeds data length
+        available_data = default_electricity_cost_path[start_point:]
+        extension = [default_electricity_cost_path[-1]] * (end_point - len(default_electricity_cost_path))
+        electricity_cost_path = available_data + extension
     electricity_cost_path_display = electricity_cost_path
     path_type_electricity = "(Default Historical Data)"
+
+# Initial conditions - use the start of the window
+initial_hashrate = hashrate_path[start_point] if start_point < len(hashrate_path) else hashrate_path[0]
+initial_block_reward = block_reward_path[start_point] if start_point < len(block_reward_path) else block_reward_path[0]
+
+# Adjust hashrate path for plotting comparison
+hashrate_for_comparison = hashrate_path[start_point:end_point] if end_point <= len(hashrate_path) else hashrate_path[start_point:]
+if len(hashrate_for_comparison) < time_steps:
+    hashrate_for_comparison = hashrate_for_comparison + [hashrate_for_comparison[-1]] * (time_steps - len(hashrate_for_comparison))
+
+# Adjust block reward path for plotting comparison
+block_reward_for_comparison = block_reward_path[start_point:end_point] if end_point <= len(block_reward_path) else block_reward_path[start_point:]
+if len(block_reward_for_comparison) < time_steps:
+    block_reward_for_comparison = block_reward_for_comparison + [block_reward_for_comparison[-1]] * (time_steps - len(block_reward_for_comparison))
 
 # Visualize the time paths
 st.header("Preview Time Paths")
 fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
 
-ax1.plot(exchange_rate_path_display, color='blue')
+# Create x-axis range based on the window
+x_range = list(range(start_point, end_point))
+
+# Plot with proper time step values
+ax1.plot(x_range, exchange_rate_path_display, color='blue')
 ax1.set_title(f'Exchange Rate Path {path_type_exchange}')
 ax1.set_xlabel('Time Steps')
 ax1.set_ylabel('Exchange Rate (USD)')
 ax1.grid(True)
 
-ax2.plot(efficiency_path_display, color='green')
+ax2.plot(x_range, efficiency_path_display, color='green')
 ax2.set_title(f'Efficiency Path {path_type_efficiency}')
 ax2.set_xlabel('Time Steps')
 ax2.set_ylabel('Efficiency')
 ax2.grid(True)
 
-ax3.plot(electricity_cost_path_display, color='red')
+ax3.plot(x_range, electricity_cost_path_display, color='red')
 ax3.set_title(f'Electricity Cost Path {path_type_electricity}')
 ax3.set_xlabel('Time Steps')
 ax3.set_ylabel('Electricity Cost (USD/kWh)')
@@ -358,9 +464,6 @@ ax3.grid(True)
 plt.tight_layout()
 st.pyplot(fig)
 
-#Initial conditions
-initial_hashrate = hashrate_path[0]
-initial_block_reward = block_reward_path[0]
 # Run simulation button
 if st.button("Run Simulation with Custom Data"):
     # Initialize blockchain with parameters
@@ -391,60 +494,97 @@ if st.button("Run Simulation with Custom Data"):
     # Run simulation
     results = run_simulation(sim_params)
     
-    # Create visualization
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+    # Create columns for plots and statistics
+    col1, col2 = st.columns([3, 1])
     
-    # Plot hashrate
-    ax1.plot(results['hashrate'], label='Simulated Hashrate', color='blue')
-    ax1.plot(hashrate_path[:time_steps], 
-            label='Actual Hashrate',
-            marker='x',
-            alpha=0.6,
-            linestyle='--',
-            color='red')
-    ax1.set_title('Hashrate over Time')
-    ax1.set_xlabel('Time Steps (days)')
-    ax1.set_ylabel('Hashrate')
-    ax1.axhline(y=upper_bound, color='r', linestyle='--', label='Upper Bound')
-    ax1.axhline(y=lower_bound, color='g', linestyle='--', label='Lower Bound')
-    ax1.grid(True)
-    ax1.set_yscale('log')
-    ax1.legend()
+    with col1:
+        st.header("Simulation Results")
+        # Create x-axis range based on the window
+        x_range = list(range(start_point, end_point))
+        
+        # Create visualization
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+        
+        # Plot hashrate with proper time step values
+        ax1.plot(x_range, results['hashrate'], label='Simulated Hashrate', color='blue')
+        ax1.plot(x_range, hashrate_for_comparison, 
+                label='Actual Hashrate',
+                marker='x',
+                alpha=0.6,
+                linestyle='--',
+                color='red')
+        ax1.set_title('Hashrate over Time')
+        ax1.set_xlabel('Time Steps (days)')
+        ax1.set_ylabel('Hashrate')
+        ax1.axhline(y=upper_bound, color='r', linestyle='--', label='Upper Bound')
+        ax1.axhline(y=lower_bound, color='g', linestyle='--', label='Lower Bound')
+        ax1.grid(True)
+        ax1.set_yscale('log')
+        ax1.legend()
+        
+        # Plot block rewards with proper time step values
+        ax2.plot(x_range, results['block_reward'], label='Block Reward', color='orange')
+        ax2.plot(x_range, block_reward_for_comparison, 
+                label='Actual Block Reward',
+                marker='x',
+                alpha=0.6,
+                linestyle='--',
+                color='blue')
+        ax2.set_title('Miners Block Reward over Time')
+        ax2.set_xlabel('Time Steps (days)')
+        ax2.set_ylabel('Block Reward (log scale)')
+        ax2.set_yscale('log')
+        ax2.grid(True)
+        ax2.legend()
+        
+        plt.tight_layout()
+        st.pyplot(fig)
     
-    # Plot block rewards
-    ax2.plot(results['block_reward'], label='Block Reward', color='orange')
-    ax2.plot(block_reward_path[:time_steps], 
-            label='Actual Block Reward',
-            marker='x',
-            alpha=0.6,
-            linestyle='--',
-            color='blue')
-    ax2.set_title('Miners Block Reward over Time')
-    ax2.set_xlabel('Time Steps (days)')
-    ax2.set_ylabel('Block Reward (log scale)')
-    ax2.set_yscale('log')
-    ax2.grid(True)
-    ax2.legend()
-    
-    plt.tight_layout()
-    st.pyplot(fig)
-
-    # Display statistics
-    st.header("Statistics")
-    
-    # Current Values
-    st.subheader("Current Values")
-    st.metric("Final Hashrate", f"{results['hashrate'][-1]:.2e} H/s")
-    st.metric("Final Block Reward", f"{results['block_reward'][-1]:.2f}")
-    st.metric("Number of Epochs", results['epochs'])
-    
-    # Volatility Metrics
-    st.subheader("Volatility Metrics")
-    st.metric("Hashrate Volatility: (std / mean)", f"{results['stats']['hashrate_volatility']:.2f}%")
-    
-    # Performance Metrics
-    st.subheader("Performance Metrics")
-    st.metric("Time in Bounds", f"{results['stats']['bound_adherence']:.1f}%")
+    with col2:
+        st.header("Statistics")
+        
+        # Calculate cost per block for final predicted hashrate
+        block_time_seconds = 10 * 60  # 10 minutes in seconds
+        final_predicted_hashrate = results['hashrate'][-1]
+        final_actual_hashrate = hashrate_for_comparison[-1] if len(hashrate_for_comparison) > 0 else hashrate_for_comparison[0]
+        final_efficiency = efficiency_path[-1] if len(efficiency_path) > 0 else efficiency_path[0]
+        final_electricity_cost = electricity_cost_path[-1] if len(electricity_cost_path) > 0 else electricity_cost_path[0]
+        
+        # Convert hashrates from H/s to TH/s
+        pred_hashrate_in_th = final_predicted_hashrate / 1e12
+        actual_hashrate_in_th = final_actual_hashrate / 1e12
+        
+        # Convert J/TH to kWh/TH - 1 J = 2.78e-7 kWh
+        joules_to_kwh = 2.78e-7
+        
+        # Calculate energy and cost for predicted hashrate
+        final_predicted_energy_per_block = pred_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
+        final_predicted_cost_per_block = final_predicted_energy_per_block * final_electricity_cost
+        
+        # Calculate for actual hashrate
+        final_actual_energy_per_block = actual_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
+        final_actual_cost_per_block = final_actual_energy_per_block * final_electricity_cost
+        
+        # Current Values
+        st.subheader("Current Values")
+        st.metric("Final Adjusted Hashrate", f"{results['hashrate'][-1]:.2e} H/s")
+        st.metric("Final Baseline Hashrate", f"{hashrate_for_comparison[-1]:.2e} H/s")
+        st.metric("Final Adjusted Block Reward (per block)", f"${results['block_reward'][-1]/144*exchange_rate_path[-1]:,.2f}")
+        st.metric("Final Baseline Block Reward (per block)", f"${block_reward_for_comparison[-1]/144*exchange_rate_path[-1]:,.2f}")
+        st.metric("Number of Epochs", results['epochs'])
+        
+        # Electricity Cost section
+        st.subheader("Electricity Costs")
+        st.metric("Adjusted Cost per Block", f"${final_predicted_cost_per_block:,.2f}")
+        st.metric("Baseline Cost per Block", f"${final_actual_cost_per_block:,.2f}")
+        
+        # Volatility Metrics
+        st.subheader("Volatility Metrics")
+        st.metric("Hashrate Volatility: (std / mean)", f"{results['stats']['hashrate_volatility']:.2f}%")
+        
+        # Performance Metrics
+        st.subheader("Performance Metrics")
+        st.metric("Time in Bounds", f"{results['stats']['bound_adherence']:.1f}%")
     
     # Export results option
     st.subheader("Export Results")
