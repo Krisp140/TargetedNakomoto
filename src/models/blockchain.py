@@ -97,7 +97,7 @@ class Blockchain:
 
         # Case 1: Hashrate too high - need to decrease rewards
         if self.DT > self.DT_N_UB:
-            print("Case 1: Hashrate above upper bound")
+            #("Case 1: Hashrate above upper bound")
             new_epoch.ceil = (self.tau) * P_B_median
             new_epoch.floor = None  # Clear any existing floor
     
@@ -109,8 +109,8 @@ class Blockchain:
                 if last_epoch.ceil >= self.DT:
                     # Gradually relax the ceiling
                     new_epoch.ceil =  (1+self.gamma) * last_epoch.ceil
-                    print("Old ceiling: " + str(last_epoch.ceil))
-                    print("Ceiling relaxed: " + str(new_epoch.ceil))
+                    #("Old ceiling: " + str(last_epoch.ceil))
+                    #("Ceiling relaxed: " + str(new_epoch.ceil))
                 else:
                     # Remove ceiling if it's no longer needed
                     new_epoch.ceil = None
@@ -120,8 +120,8 @@ class Blockchain:
                 if last_epoch.floor <= self.DT:
                     # Gradually relax the floor
                     new_epoch.ceil = (self.gamma) * last_epoch.floor
-                    print("Old floor: " + str(last_epoch.floor))
-                    print("Floor relaxed: " + str(new_epoch.floor))
+                    #("Old floor: " + str(last_epoch.floor))
+                    #("Floor relaxed: " + str(new_epoch.floor))
                 else:
                     # Remove floor if it's no longer needed
                     new_epoch.floor = None
@@ -131,7 +131,7 @@ class Blockchain:
 
         # Case 3: Hashrate too low - need to increase rewards
         elif self.DT < self.DT_N_LB:
-            print("Case 3: Hashrate below lower bound")
+            #("Case 3: Hashrate below lower bound")
             new_epoch.floor =  (1+(1-self.tau)) * P_B_median
             new_epoch.ceil = None  # Clear any existing ceiling
 

@@ -7,7 +7,7 @@ from sklearn.linear_model import Lasso, LassoCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, r2_score
 
-def load_and_prepare_data(filepath):
+def load_and_prepare_data(filepath, dropna=True):
     """
     Load historical data from CSV and prepare it for regression analysis.
     Expected columns: date, hashrate, exchange_rate, block_reward, mining_cost
@@ -33,9 +33,9 @@ def load_and_prepare_data(filepath):
 
     df['log_hashrate_forward'] = df['log_hashrate'].shift(-1)
     
-    # Drop rows with NaN values (from lag creation)
-    df = df.dropna()
-    
+    # Drop rows with NaN values (from lag creation) if requested
+    if dropna:
+        df = df.dropna()
     return df
 
 
@@ -537,13 +537,11 @@ def run_regression_with_selected_features(df_clean, selected_features):
 
 def main():
     # Load and prepare data
-    df = load_and_prepare_data('data/merged_data.csv')
+    df_clean = load_and_prepare_data('merged_data.csv', dropna=True)  # for fitting
+    df_full = load_and_prepare_data('merged_data.csv', dropna=False)  # for full prediction export
     
     # Analyze correlation to check for multicollinearity
     print("\n==== Correlation Analysis ====")
-    
-    # First clean the data to prevent errors
-    df_clean = df.dropna()
     
     # Calculate correlation on clean data
     correlation_matrix = df_clean[['log_eP_forward', 'log_efficiency_forward', 
@@ -613,7 +611,40 @@ def main():
         print("\n==== Model Validation ====")
         print("Original Model:")
         original_metrics = validate_model(df_clean, alphas)
+
+        # === Export predicted hashrate from original model to CSV (cleaned, as before) ===
+        predicted = original_metrics['predicted']
+        actual = original_metrics['actual']
+        if 'Date' in df_clean.columns:
+            date_index = df_clean.loc[predicted.index, 'Date']
+        else:
+            date_index = predicted.index
+        export_df = pd.DataFrame({
+            'Date': date_index,
+            'Predicted_HashRate': predicted.values,
+            'Actual_HashRate': actual.values
+        })
+        export_df.to_csv('predicted_hashrate_original.csv', index=False)
+        print(f"\nPredicted hashrate (original model) exported to predicted_hashrate_original.csv with {len(export_df)} rows.")
         
+        # === Export predicted hashrate for ALL dates (full, not dropping NaNs) ===
+        # Use the same regression coefficients, but apply to df_full
+        feature_set = ['log_eP_forward', 'log_efficiency_forward', 'log_electricity_cost_forward', 'log_block_speed_change_forward']
+        predicted_log_hashrate_full = alphas.get('alpha1', 0)
+        for i, feature in enumerate(feature_set, 2):
+            alpha_key = f'alpha{i}'
+            if alpha_key in alphas and feature in df_full.columns:
+                predicted_log_hashrate_full += alphas[alpha_key] * df_full[feature]
+        predicted_hashrate_full = np.exp(predicted_log_hashrate_full)
+        # Export with Date and Actual_HashRate (if available)
+        export_full_df = pd.DataFrame({
+            'Date': df_full['Date'] if 'Date' in df_full.columns else df_full.index,
+            'Predicted_HashRate': predicted_hashrate_full,
+            'Actual_HashRate': df_full['HashRate'] if 'HashRate' in df_full.columns else np.nan
+        })
+        export_full_df.to_csv('predicted_hashrate_full.csv', index=False)
+        print(f"\nPredicted hashrate (original model, all dates) exported to predicted_hashrate_full.csv with {len(export_full_df)} rows.")
+
         print("\nModel with Selected Features:")
         feature_set = {'constant': selected_alphas['alpha1']}
         for i, feature in enumerate(lasso_results['selected_features'], 2):
@@ -646,6 +677,23 @@ def main():
         # Plot results
         plot_results(df_clean, results)
         plot_results(df_clean, selected_results)
+
+        # === Export predicted hashrate to CSV ===
+        # Use the predicted and actual values from lasso_metrics
+        predicted = lasso_metrics['predicted']
+        actual = lasso_metrics['actual']
+        # Try to get the date index if available
+        if 'Date' in df_clean.columns:
+            date_index = df_clean.loc[predicted.index, 'Date']
+        else:
+            date_index = predicted.index  # fallback to integer index
+        export_df = pd.DataFrame({
+            'Date': date_index,
+            'Predicted_HashRate': predicted.values,
+            'Actual_HashRate': actual.values
+        })
+        export_df.to_csv('predicted_hashrate_lasso.csv', index=False)
+        print(f"\nPredicted hashrate (Lasso) exported to predicted_hashrate_lasso.csv with {len(export_df)} rows.")
     else:
         print("\nNo features were selected by Lasso. Skipping regression with selected features.")
         print("Try using a smaller alpha value manually for Lasso.")

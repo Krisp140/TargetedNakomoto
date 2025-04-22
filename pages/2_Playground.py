@@ -12,10 +12,11 @@ import math
 # Load default time path data
 try:
     default_data = pd.read_csv('data/merged_data.csv')
+    hashrate_data = pd.read_csv('data/predicted_hashrate_full.csv')
     default_exchange_rate_path = default_data['BTCPrice'].tolist()
     default_efficiency_path = default_data['Efficiency'].tolist()
     default_electricity_cost_path = default_data['ElectricityPrice'].tolist()
-    hashrate_path = default_data['HashRate'].tolist()
+    hashrate_path = hashrate_data['Predicted_HashRate'].tolist()
     block_reward_path = default_data['BTC'].tolist()
     default_time_steps = len(default_exchange_rate_path)
 except Exception as e:
@@ -58,8 +59,10 @@ exponent = int(exponent)
 block_time_seconds = 10 * 60  # 10 minutes in seconds
 current_efficiency = default_efficiency_path[-1]  # J/TH
 current_electricity_cost = default_electricity_cost_path[-1]  # $/kWh
-joules_to_kwh = 2.78e-7
+joules_to_kwh = 2.78e-10
 hashrate_in_th = mean_hashrate / 1e12
+
+
 
 # Calculate equivalent electricity cost for mean hashrate
 mean_energy_per_block = hashrate_in_th * block_time_seconds * current_efficiency * joules_to_kwh
@@ -554,9 +557,28 @@ if st.button("Run Simulation with Custom Data"):
         pred_hashrate_in_th = final_predicted_hashrate / 1e12
         actual_hashrate_in_th = final_actual_hashrate / 1e12
         
-        # Convert J/TH to kWh/TH - 1 J = 2.78e-7 kWh
-        joules_to_kwh = 2.78e-7
+        # Convert J/TH to kWh/TH - 1 J = 2.78e-10 kWh
+        joules_to_kwh = 2.78e-10
         
+        # Convert hashrate to TH/s
+        final_predicted_hashrate_th = final_predicted_hashrate / 1e12
+        final_actual_hashrate_th = final_actual_hashrate / 1e12
+
+        # Energy per block (kWh) = hashrate_th * block_time_seconds * efficiency (J/TH) * (J to kWh)
+        preditcted_energy_per_block = final_predicted_hashrate_th * block_time_seconds * final_efficiency * joules_to_kwh
+        actual_energy_per_block = final_actual_hashrate_th * block_time_seconds * final_efficiency * joules_to_kwh
+        # Cost per block = energy_per_block * electricity_cost ($/kWh)
+        predicted_cost_per_block = preditcted_energy_per_block * final_electricity_cost
+        actual_cost_per_block = actual_energy_per_block * final_electricity_cost
+
+        # Calculate energy and cost for predicted hashrate
+        final_predicted_energy_per_block = pred_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
+        final_predicted_cost_per_block = final_predicted_energy_per_block * final_electricity_cost
+        
+        # Calculate for actual hashrate
+        final_actual_energy_per_block = actual_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
+        final_actual_cost_per_block = final_actual_energy_per_block * final_electricity_cost
+            
         # Calculate energy and cost for predicted hashrate
         final_predicted_energy_per_block = pred_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
         final_predicted_cost_per_block = final_predicted_energy_per_block * final_electricity_cost
@@ -565,6 +587,15 @@ if st.button("Run Simulation with Custom Data"):
         final_actual_energy_per_block = actual_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
         final_actual_cost_per_block = final_actual_energy_per_block * final_electricity_cost
         
+            
+        # Calculate energy and cost for predicted hashrate
+        final_predicted_energy_per_block = pred_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
+        final_predicted_cost_per_block = final_predicted_energy_per_block * final_electricity_cost
+        
+        # Calculate for actual hashrate
+        final_actual_energy_per_block = actual_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
+        final_actual_cost_per_block = final_actual_energy_per_block * final_electricity_cost
+    
         # Current Values
         st.subheader("Current Values")
         st.metric("Final Adjusted Hashrate", f"{results['hashrate'][-1]:.2e} H/s")

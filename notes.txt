@@ -16,3 +16,4 @@ TODO:::
 > Sliding window on playground ##
 > Block fee optional paramater (hard)
 > Create bounds for elect cost and consumption along with hashrate ##
+> Use estimation model for actual hashrate data instead of straight ripping data
