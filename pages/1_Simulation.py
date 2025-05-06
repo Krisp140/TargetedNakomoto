@@ -218,22 +218,6 @@ else:
     st.sidebar.text(f"Equivalent Upper Hashrate: {upper_bound:.2e} H/s")
     st.sidebar.text(f"Equivalent Lower Hashrate: {lower_bound:.2e} H/s")
 
-# Calculate estimated cost per block at current hashrate and efficiency
-# Bitcoin block time is approximately 10 minutes
-block_time_seconds = 10 * 60  # 10 minutes in seconds
-current_hashrate = hashrate[-1]
-current_efficiency = efficiency_path[-1]  # This is in J/TH (joules per terahash)
-current_electricity_cost = electricity_cost_path[-1]  # This is in $/kWh
-
-# Convert hashrate from H/s to TH/s for calculation
-hashrate_in_th = current_hashrate / 1e12
-
-# Formula: hashrate (TH/s) * seconds per block * (J/TH converted to kWh/TH) * $/kWh
-# 1 J = 2.78e-7 kWh
-joules_to_kwh = 2.78e-7
-actual_energy_per_block = hashrate_in_th * block_time_seconds * current_efficiency * joules_to_kwh
-actual_cost_per_block = actual_energy_per_block * current_electricity_cost
-
 # Main content
 col1, col2 = st.columns([3, 1])
 
@@ -271,25 +255,25 @@ with col1:
         actual_hashrate_in_th = final_actual_hashrate / 1e12
         
         # Convert J/TH to kWh/TH - 1 J = 2.78e-10 kWh
-        joules_to_kwh = 2.78e-10
+        joules_to_kwh = 2.78e-7
         # Convert hashrate to TH/s
         final_predicted_hashrate_th = final_predicted_hashrate / 1e12
         final_actual_hashrate_th = final_actual_hashrate / 1e12
 
         # Energy per block (kWh) = hashrate_th * block_time_seconds * efficiency (J/TH) * (J to kWh)
-        preditcted_energy_per_block = final_predicted_hashrate_th * block_time_seconds * final_efficiency * joules_to_kwh
+        predicted_energy_per_block = final_predicted_hashrate_th * block_time_seconds * final_efficiency * joules_to_kwh
         actual_energy_per_block = final_actual_hashrate_th * block_time_seconds * final_efficiency * joules_to_kwh
         # Cost per block = energy_per_block * electricity_cost ($/kWh)
-        predicted_cost_per_block = preditcted_energy_per_block * final_electricity_cost
-        actual_cost_per_block = actual_energy_per_block * final_electricity_cost
+        predicted_cost_per_block = predicted_energy_per_block * 0.04
+        actual_cost_per_block = actual_energy_per_block * 0.04
 
         # Calculate energy and cost for predicted hashrate
         final_predicted_energy_per_block = pred_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
-        final_predicted_cost_per_block = final_predicted_energy_per_block * final_electricity_cost
+        final_predicted_cost_per_block = final_predicted_energy_per_block * 0.04
         
         # Calculate for actual hashrate
         final_actual_energy_per_block = actual_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
-        final_actual_cost_per_block = final_actual_energy_per_block * final_electricity_cost
+        final_actual_cost_per_block = final_actual_energy_per_block * 0.04
         
         # Create visualization
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
@@ -516,24 +500,24 @@ if st.session_state.get('run_optimal_sim', False):
     preditcted_energy_per_block = final_predicted_hashrate_th * block_time_seconds * final_efficiency * joules_to_kwh
     actual_energy_per_block = final_actual_hashrate_th * block_time_seconds * final_efficiency * joules_to_kwh
     # Cost per block = energy_per_block * electricity_cost ($/kWh)
-    predicted_cost_per_block = preditcted_energy_per_block * final_electricity_cost
-    actual_cost_per_block = actual_energy_per_block * final_electricity_cost
+    predicted_cost_per_block = preditcted_energy_per_block * final_electricity_cost/100
+    actual_cost_per_block = actual_energy_per_block * final_electricity_cost/100
 
     # Calculate energy and cost for predicted hashrate
     final_predicted_energy_per_block = pred_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
-    final_predicted_cost_per_block = final_predicted_energy_per_block * final_electricity_cost
+    final_predicted_cost_per_block = final_predicted_energy_per_block * final_electricity_cost/100
     
     # Calculate for actual hashrate
     final_actual_energy_per_block = actual_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
-    final_actual_cost_per_block = final_actual_energy_per_block * final_electricity_cost
+    final_actual_cost_per_block = final_actual_energy_per_block * final_electricity_cost/100
         
     # Calculate energy and cost for predicted hashrate
     final_predicted_energy_per_block = pred_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
-    final_predicted_cost_per_block = final_predicted_energy_per_block * final_electricity_cost
+    final_predicted_cost_per_block = final_predicted_energy_per_block * final_electricity_cost/100
     
     # Calculate for actual hashrate
     final_actual_energy_per_block = actual_hashrate_in_th * block_time_seconds * final_efficiency * joules_to_kwh
-    final_actual_cost_per_block = final_actual_energy_per_block * final_electricity_cost
+    final_actual_cost_per_block = final_actual_energy_per_block * final_electricity_cost/100
     
     # Display plots in the first column
     with opt_col1:

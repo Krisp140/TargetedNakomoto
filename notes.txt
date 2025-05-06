@@ -16,4 +16,10 @@ TODO:::
 > Sliding window on playground ##
 > Block fee optional paramater (hard)
 > Create bounds for elect cost and consumption along with hashrate ##
-> Use estimation model for actual hashrate data instead of straight ripping data
+> Use estimation model for actual hashrate data instead of straight ripping data ##
+
+
+Riot platforms Inc: (2025: 3.8, 2024: 3.1, 2023: 1.7)
+Mara Holding: (2023: 4.8, 2022: 4.1, 2021: 2.8)
+Core Scientfic: (2023: 5.6, 2022: 6.95, 2021: 3.55)
+CleanSpark (2024: 4.3, 2023: 4.8, 2022: 4.1)
