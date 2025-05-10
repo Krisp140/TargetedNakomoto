@@ -112,8 +112,8 @@ block_reward_path = data['BTC'].tolist()
 
 # Sidebar for parameters
 st.sidebar.header("Control Parameters")
-tau = st.sidebar.number_input("Tau", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
-gamma = st.sidebar.number_input("Gamma", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
+tau = st.sidebar.number_input("Tau (repsonsiveness outside bounds)", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
+gamma = st.sidebar.number_input("Gamma (repsonsiveness within bounds)", min_value=0.0, max_value=1.0, value=0.1, step=0.1)
 
 st.sidebar.header("Target Bounds")
 # Add toggle for setting bounds by electricity cost instead of hashrate
@@ -319,8 +319,8 @@ with col1:
             
             # Current Values
             st.subheader("Current Values")
-            st.metric("Final Adjusted Hashrate", f"{results['hashrate'][-1]:.2e} H/s")
-            st.metric("Final Baseline Hashrate", f"{hashrate[-1]:.2e} H/s")
+            st.metric("Final Adjusted Hashrate", f"{results['hashrate'][-1] / 1e18 :.2f} Ehash/s")
+            st.metric("Final Baseline Hashrate", f"{hashrate[-1] / 1e18 :.2f} Ehash/s")
             st.metric("Final Adjusted Block Reward (per block)", f"${results['block_reward'][-1]/144*e_path[-1]:,.2f}")
             st.metric("Final Baseline Block Reward (per block)", f"${block_reward_path[-1]/144*e_path[-1]:,.2f}")
             st.metric("Number of Epochs", results['epochs'])

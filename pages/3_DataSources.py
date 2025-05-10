@@ -20,34 +20,40 @@ st.write("This page provides information about the data sources used in our mode
 st.header("Data Source Links")
 st.write("The following data sources were used to build and validate our model:")
 
-# Create a table of data sources with descriptions
-data_sources = {
-    "Source": [
-        "Bitcoin Visuals", 
-        "Bitcoin Visuals", 
-        "Cambridge Centre for Alternative Finance",
-        "ERCOT (Electric Reliability Council of Texas)",
-        "Bitcoin Visuals"
-    ],
-    "Data Type": [
-        "Network hashrate (TH/s)",
-        "Bitcoin price ($)",
-        "Mining efficiency (Th/kWh)",
-        "Electricity costs ($/kWh)",
-        "Block speed (s)"
-    ],
-    "URL": [
-        "https://bitcoinvisuals.com/",
-        "https://bitcoinvisuals.com/",
-        "https://ccaf.io/",
-        "https://www.ercot.com/gridinfo/load/load_hist",
-        "https://bitcoinvisuals.com/"
-    ]
-}
+# Create sources data
+sources = [
+    {
+        "name": "Bitcoin Visuals",
+        "data_type": "Network hashrate (TH/s)",
+        "url": "https://bitcoinvisuals.com/chain-hash-rate"
+    },
+    {
+        "name": "Bitcoin Visuals",
+        "data_type": "Bitcoin price ($)",
+        "url": "https://bitcoinvisuals.com/market-price"
+    },
+    {
+        "name": "Cambridge Centre for Alternative Finance",
+        "data_type": "Mining efficiency (Th/kWh)",
+        "url": "https://ccaf.io/"
+    },
+    {
+        "name": "Bitcoin Visuals",
+        "data_type": "Block reward ($)",
+        "url": "https://bitcoinvisuals.com/chain-block-reward-day"
+    },
+    {
+        "name": "Bitcoin Visuals",
+        "data_type": "Block speed (s)",
+        "url": "https://bitcoinvisuals.com/chain-speed"
+    }
+]
 
-df_sources = pd.DataFrame(data_sources)
-st.dataframe(df_sources, use_container_width=True, hide_index=True)
-st.write("Note: The electricity cost data specifically focuses on Texas prices, as it's a major hub for Bitcoin mining operations in the United States.")
+# Display sources as clickable markdown links
+for i, source in enumerate(sources):
+    st.markdown(f"**{i+1}. [{source['name']}]({source['url']})** - {source['data_type']}")
+
+st.write("Note: We initially used electricity cost data specifically focuses on Texas prices, but decided to use the SEC EDGAR data as it is more indicative of the average electricity cost for all mining companies due to private contracts.")
 
 # Section 2: Electricity Costs Comparison
 st.header("Electricity Costs by Mining Company")
@@ -58,43 +64,130 @@ This table shows the electricity costs for four major Bitcoin mining companies o
 Electricity cost is one of the most critical factors affecting mining profitability and hashrate deployment decisions.
 """)
 
-# Create the electricity cost comparison table with quarterly data
-years = [2021, 2022, 2023]
-quarters = ["Q1", "Q2", "Q3", "Q4"]
-
-# Generate dates for the index
-dates = [f"{year} {quarter}" for year in years for quarter in quarters]
-
-# Create sample data for 4 companies (in cents per kWh)
-# This is placeholder data - replace with actual data when available
-data = {
-    "Riot Platforms": [
-        'N/A', '2.5 ¢/kWh', '2.5 ¢/kWh', '2.5 ¢/kWh',  # 2021
-        '2.5 ¢/kWh', '2.5 ¢/kWh', '2.4 ¢/kWh', '3.1 ¢/kWh',  # 2022
-        '4.2 ¢/kWh', '2.8 ¢/kWh', '1.7 ¢/kWh', '1.7 ¢/kWh'   # 2023
-    ],
-    "Marathon Digital": [
-        '2.8 ¢/kWh', '2.8 ¢/kWh', '2.8 ¢/kWh', '2.8 ¢/kWh',  # 2021
-        '2.8 ¢/kWh', '2.8 ¢/kWh', '2.8 ¢/kWh', '2.8 ¢/kWh',  # 2022
-        '2.8 ¢/kWh', '2.8 ¢/kWh', '2.8 ¢/kWh', '2.8 ¢/kWh'   # 2023
-    ],
-    "Core Scientific": [
-        '4.2 ¢/kWh', '4.2 ¢/kWh', '4.2 ¢/kWh', '4.2 ¢/kWh',  # 2021
-        '4.2 ¢/kWh', '5.0 ¢/kWh', '6.6 ¢/kWh', '6.0 ¢/kWh',  # 2022
-        '5.0 ¢/kWh', '5.0 ¢/kWh', '5.0 ¢/kWh', '5.0 ¢/kWh'   # 2023
-    ],
-    "CleanSpark": [
-        '4.5 ¢/kWh', '4.5 ¢/kWh', '4.5 ¢/kWh', '4.5 ¢/kWh',  # 2021
-        '4.5 ¢/kWh', '4.5 ¢/kWh', '4.5 ¢/kWh', '4.5 ¢/kWh',  # 2022
-        '4.5 ¢/kWh', '4.5 ¢/kWh', '4.5 ¢/kWh', '4.5 ¢/kWh'   # 2023
-    ]
+# Company SEC EDGAR URLs
+company_urls = {
+    "Riot Platforms": "https://www.sec.gov/edgar/browse/?CIK=1167419",
+    "Marathon Digital": "https://www.sec.gov/edgar/browse/?CIK=1507605", 
+    "Core Scientific": "https://www.sec.gov/edgar/browse/?CIK=1839341",
+    "CleanSpark": "https://www.sec.gov/edgar/browse/?CIK=827876"
 }
 
-# Create DataFrame
-df_electricity = pd.DataFrame(data, index=dates)
+# Create a static HTML table with clickable company names
+html_table = """
+<style>
+.electricity-table {{
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #23272b;
+}}
+.electricity-table th, .electricity-table td {{
+    border: 1px solid #444;
+    padding: 8px;
+    text-align: left;
+    color: #f1f1f1;
+}}
+.electricity-table th {{
+    background-color: #343a40;
+    font-weight: bold;
+    color: #fff;
+}}
+.electricity-table tr:nth-child(even) {{
+    background-color: #2c3035;
+}}
+.company-link {{
+    color: #4da3ff;
+    text-decoration: underline;
+}}
+</style>
 
-# Display the table
-st.dataframe(df_electricity, use_container_width=True)
+<table class="electricity-table">
+    <tr>
+        <th>Company</th>
+        <th>2021 Q1</th>
+        <th>2021 Q2</th>
+        <th>2021 Q3</th>
+        <th>2021 Q4</th>
+        <th>2022 Q1</th>
+        <th>2022 Q2</th>
+        <th>2022 Q3</th>
+        <th>2022 Q4</th>
+        <th>2023 Q1</th>
+        <th>2023 Q2</th>
+        <th>2023 Q3</th>
+        <th>2023 Q4</th>
+    </tr>
+    <tr>
+        <td><a href="{0}" class="company-link" target="_blank">Riot Platforms</a></td>
+        <td>N/A</td>
+        <td>2.5 ¢/kWh</td>
+        <td>2.5 ¢/kWh</td>
+        <td>2.5 ¢/kWh</td>
+        <td>2.5 ¢/kWh</td>
+        <td>2.5 ¢/kWh</td>
+        <td>2.4 ¢/kWh</td>
+        <td>3.1 ¢/kWh</td>
+        <td>4.2 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>1.7 ¢/kWh</td>
+        <td>1.7 ¢/kWh</td>
+    </tr>
+    <tr>
+        <td><a href="{1}" class="company-link" target="_blank">Marathon Digital</a></td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+        <td>2.8 ¢/kWh</td>
+    </tr>
+    <tr>
+        <td><a href="{2}" class="company-link" target="_blank">Core Scientific</a></td>
+        <td>4.2 ¢/kWh</td>
+        <td>4.2 ¢/kWh</td>
+        <td>4.2 ¢/kWh</td>
+        <td>4.2 ¢/kWh</td>
+        <td>4.2 ¢/kWh</td>
+        <td>5.0 ¢/kWh</td>
+        <td>6.6 ¢/kWh</td>
+        <td>6.0 ¢/kWh</td>
+        <td>5.0 ¢/kWh</td>
+        <td>5.0 ¢/kWh</td>
+        <td>5.0 ¢/kWh</td>
+        <td>5.0 ¢/kWh</td>
+    </tr>
+    <tr>
+        <td><a href="{3}" class="company-link" target="_blank">CleanSpark</a></td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+        <td>4.5 ¢/kWh</td>
+    </tr>
+</table>
+"""
+
+formatted_table = html_table.format(
+    company_urls["Riot Platforms"],
+    company_urls["Marathon Digital"],
+    company_urls["Core Scientific"],
+    company_urls["CleanSpark"]
+)
+
+# Display the table using st.markdown with unsafe_allow_html=True
+st.markdown(formatted_table, unsafe_allow_html=True)
 
 # Add explanations for key trends
 st.subheader("Note")
@@ -124,7 +217,7 @@ try:
     for path in image_paths:
         if os.path.exists(path):
             image = Image.open(path)
-            st.image(image, caption="Predicted vs Actual Bitcoin Network Hashrate", use_container_width=True)
+            st.image(image, caption="Predicted vs Actual Bitcoin Network Hashrate")
             image_loaded = True
             break
     
