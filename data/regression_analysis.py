@@ -537,8 +537,8 @@ def run_regression_with_selected_features(df_clean, selected_features):
 
 def main():
     # Load and prepare data
-    df_clean = load_and_prepare_data('merged_data.csv', dropna=True)  # for fitting
-    df_full = load_and_prepare_data('merged_data.csv', dropna=False)  # for full prediction export
+    df_clean = load_and_prepare_data('data/merged_data_2.csv', dropna=True)  # for fitting
+    df_full = load_and_prepare_data('data/merged_data_2.csv', dropna=False)  # for full prediction export
     
     # Analyze correlation to check for multicollinearity
     print("\n==== Correlation Analysis ====")
