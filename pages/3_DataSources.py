@@ -24,27 +24,27 @@ st.write("The following data sources were used to build and validate our model:"
 sources = [
     {
         "name": "Bitcoin Visuals",
-        "data_type": "Network hashrate (TH/s)",
+        "data_type": "Network hashrate (H/s). Derived in section 4.1 of paper https://arxiv.org/abs/2405.15089. ",
         "url": "https://bitcoinvisuals.com/chain-hash-rate"
     },
     {
-        "name": "Bitcoin Visuals",
-        "data_type": "Bitcoin price ($)",
-        "url": "https://bitcoinvisuals.com/market-price"
+        "name": "CoinMarketCap",
+        "data_type": "Average Daily Bitcoin Price ($). Weighted across all exchanges.",
+        "url": "https://support.coinmarketcap.com/hc/en-us/articles/360015968632-How-are-prices-calculated-on-CoinMarketCap?utm_source=chatgpt.com"
     },
     {
         "name": "Cambridge Centre for Alternative Finance",
-        "data_type": "Mining efficiency (Th/kWh)",
-        "url": "https://ccaf.io/"
+        "data_type": "Mining efficiency (Th/kWh). Bottom of page. Recieved direct data from inquiry. Estimate derived from specifications of over a 100 different device types",
+        "url": "https://ccaf.io/cbnsi/cbeci"
     },
     {
         "name": "Bitcoin Visuals",
-        "data_type": "Block reward ($)",
+        "data_type": "Block reward ($). Run by thier node. ",
         "url": "https://bitcoinvisuals.com/chain-block-reward-day"
     },
     {
         "name": "Bitcoin Visuals",
-        "data_type": "Block speed (s)",
+        "data_type": "Block speed (s). Daily median time between bitcoin blocks. Excludes first day. Run by their node.",
         "url": "https://bitcoinvisuals.com/chain-speed"
     }
 ]
@@ -201,7 +201,7 @@ st.header("Model Prediction Results")
 
 # Description
 st.write("""
-The graph below shows our hashrate prediction model results compared to actual hashrate values. 
+The graph below shows our hashrate prediction model results compared to estimated hashrate values. 
 The model incorporates the variables discussed in our analysis, including bitcoin price, mining efficiency, 
 electricity costs, and block speed adjustments.
 """)
