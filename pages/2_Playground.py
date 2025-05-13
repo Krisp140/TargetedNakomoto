@@ -507,9 +507,9 @@ if st.button("Run Simulation with Custom Data"):
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
         
         # Plot hashrate with proper time step values
-        ax1.plot(x_range, results['hashrate'], label='Simulated Hashrate', color='blue')
+        ax1.plot(x_range, results['hashrate'], label='Adjusted Hashrate', color='blue')
         ax1.plot(x_range, hashrate_for_comparison, 
-                label='Actual Hashrate',
+                label='Baseline Hashrate',
                 marker='x',
                 alpha=0.6,
                 linestyle='--',
@@ -524,9 +524,9 @@ if st.button("Run Simulation with Custom Data"):
         ax1.legend()
         
         # Plot block rewards with proper time step values
-        ax2.plot(x_range, results['block_reward'], label='Block Reward', color='orange')
+        ax2.plot(x_range, results['block_reward'], label='Adjusted Block Reward', color='orange')
         ax2.plot(x_range, block_reward_for_comparison, 
-                label='Actual Block Reward',
+                label='Baseline Block Reward',
                 marker='x',
                 alpha=0.6,
                 linestyle='--',

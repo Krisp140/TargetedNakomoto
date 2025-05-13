@@ -181,6 +181,21 @@ html_table = """
         <td>4.5 ¢/kWh</td>
         <td>4.5 ¢/kWh</td>
     </tr>
+    <tr style="background-color: #1e3a5f; font-weight: bold;">
+        <td>Average</td>
+        <td>3.8 ¢/kWh</td>
+        <td>3.5 ¢/kWh</td>
+        <td>3.5 ¢/kWh</td>
+        <td>3.5 ¢/kWh</td>
+        <td>3.5 ¢/kWh</td>
+        <td>3.7 ¢/kWh</td>
+        <td>4.1 ¢/kWh</td>
+        <td>4.1 ¢/kWh</td>
+        <td>4.1 ¢/kWh</td>
+        <td>3.8 ¢/kWh</td>
+        <td>3.5 ¢/kWh</td>
+        <td>3.5 ¢/kWh</td>
+    </tr>
 </table>
 """
 
