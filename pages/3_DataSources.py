@@ -24,34 +24,39 @@ st.write("The following data sources were used to build and validate our model:"
 sources = [
     {
         "name": "Bitcoin Visuals",
-        "data_type": "Network hashrate (H/s). Derived in section 4.1 of paper https://arxiv.org/abs/2405.15089. ",
+        "data_type": "Network hashrate (H/s)",
+        "description": "Derived in section 4.1 of paper https://arxiv.org/abs/2405.15089.",
         "url": "https://bitcoinvisuals.com/chain-hash-rate"
     },
     {
         "name": "CoinMarketCap",
-        "data_type": "Average Daily Bitcoin Price ($). Weighted across all exchanges.",
+        "data_type": "Average Daily Bitcoin Price ($)",
+        "description": "Weighted average across several exchanges.",
         "url": "https://support.coinmarketcap.com/hc/en-us/articles/360015968632-How-are-prices-calculated-on-CoinMarketCap?utm_source=chatgpt.com"
     },
     {
         "name": "Cambridge Centre for Alternative Finance",
-        "data_type": "Mining efficiency (Th/kWh). Bottom of page. Recieved direct data from inquiry. Estimate derived from specifications of over a 100 different device types",
+        "data_type": "Mining efficiency (Th/kWh)",
+        "description": "Bottom of page. Received direct data from inquiry. Estimate derived from specifications of over a 100 different device types.",
         "url": "https://ccaf.io/cbnsi/cbeci"
     },
     {
         "name": "Bitcoin Visuals",
-        "data_type": "Block reward ($). Run by thier node. ",
+        "data_type": "Block reward ($)",
+        "description": "Run by Bitcoin Visuals node.",
         "url": "https://bitcoinvisuals.com/chain-block-reward-day"
     },
     {
         "name": "Bitcoin Visuals",
-        "data_type": "Block speed (s). Daily median time between bitcoin blocks. Excludes first day. Run by their node.",
+        "data_type": "Block speed (s)",
+        "description": "Daily median time between bitcoin blocks. Run by Bitcoin Visuals node.",
         "url": "https://bitcoinvisuals.com/chain-speed"
     }
 ]
 
-# Display sources as clickable markdown links
+# Display sources with quantity first, then source and explanation
 for i, source in enumerate(sources):
-    st.markdown(f"**{i+1}. [{source['name']}]({source['url']})** - {source['data_type']}")
+    st.markdown(f"**{i+1}. {source['data_type']}** - [{source['name']}]({source['url']}). {source['description']}")
 
 st.write("Note: We initially used electricity cost data specifically focuses on Texas prices, but decided to use the SEC EDGAR data as it is more indicative of the average electricity cost for all mining companies due to private contracts.")
 
@@ -217,7 +222,7 @@ try:
     for path in image_paths:
         if os.path.exists(path):
             image = Image.open(path)
-            st.image(image, caption="Predicted vs Actual Bitcoin Network Hashrate")
+            st.image(image, caption="Actual vs Model Predicted Hashrate")
             image_loaded = True
             break
     
@@ -233,10 +238,8 @@ The data used in our model indicates several key trends:
 1. **Long-term correlation** between Bitcoin price and hashrate remains strong, but with varying time lags.
 2. **Mining efficiency improvements** have accelerated, with average efficiency improving approximately 20% year-over-year.
 3. **Geographic shift** in mining operations from China to North America has affected the average electricity costs.
-4. **Increased institutionalization** of mining has led to more predictable hashrate deployment patterns.
 
 These trends help explain the accuracy and limitations of our prediction model.
 """)
 
 # Footer
-st.caption("This analysis is for educational purposes only and should not be considered financial advice.")

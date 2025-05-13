@@ -136,11 +136,11 @@ def plot_results(df, results):
     Plot actual vs predicted hashrate
     """
     plt.figure(figsize=(12, 6))
-    plt.plot(df.index, df['HashRate'], label='Actual Hashrate')
-    plt.plot(df.index, np.exp(results.fittedvalues), label='Predicted Hashrate')
+    plt.plot(df.index, df['HashRate'], label='Baseline Hashrate')
+    plt.plot(df.index, np.exp(results.fittedvalues), label='Model Predicted Hashrate')
     plt.xlabel('Time')
     plt.ylabel('Hashrate')
-    plt.title('Actual vs Predicted Hashrate')
+    plt.title('Baseline Hashrate vs Model Predicted Hashrate')
     plt.legend()
     plt.yscale('log')
     plt.grid(True)

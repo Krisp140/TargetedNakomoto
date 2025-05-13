@@ -281,12 +281,12 @@ with col1:
         # Plot hashrate
         ax1.plot(results['hashrate'], label='Simulated Hashrate', color='blue')
         ax1.plot(hashrate[:time_steps], 
-                label='Actual Hashrate',
+                label='Baseline Hashrate',
                 marker='x',
                 alpha=0.6,
                 linestyle='--',
                 color='red')
-        ax1.set_title('Actual vs Predicted Hashrate (1-1-2022 to 3-8-2025)')
+        ax1.set_title('Baseline vs Adjusted Hashrate (1-1-2022 to 3-8-2025)')
         ax1.set_xlabel('Time Steps (days)')
         ax1.set_ylabel('Hashrate')
         ax1.axhline(y=upper_bound, color='r', linestyle='--', label='Upper Bound')
@@ -298,7 +298,7 @@ with col1:
         # Plot block rewards
         ax2.plot(results['block_reward'], label='Block Reward', color='orange')
         ax2.plot(block_reward_path[:time_steps], 
-                label='Actual Block Reward',
+                label='Baseline Block Reward',
                 marker='x',
                 alpha=0.6,
                 linestyle='--',
@@ -312,6 +312,103 @@ with col1:
         
         plt.tight_layout()
         st.pyplot(fig)
+        
+        st.write("""
+                Adjusted Hashrate is the model predicted hashrate that results from the changes to the block reward this is caused by the choices of control parameters interacting with the the target hashrate interval.
+                """)
+        
+        # Add flow chart showing the model's flow
+        st.subheader("Model Flow Chart")
+        
+        # Create flow chart using matplotlib
+        flow_fig, flow_ax = plt.subplots(figsize=(10, 5))
+        flow_ax.axis('off')
+        
+        # Define node positions
+        nodes = {
+            'control_params': (0.2, 0.8),  # Control Parameters (Tau, Gamma)
+            'hashrate': (0.5, 0.8),       # Hashrate
+            'block_reward': (0.5, 0.2),   # Adjusted Block Reward
+        }
+        
+        # Define node dimensions (width, height)
+        node_width = 0.2
+        node_height = 0.1
+        
+        # Define connection points on the edges of nodes
+        connection_points = {
+            # Format: [x_source, y_source, x_target, y_target]
+            'block_to_hash': [nodes['block_reward'][0], nodes['block_reward'][1] + node_height/2,  # top of block_reward
+                             nodes['hashrate'][0], nodes['hashrate'][1] - node_height/2],  # bottom of hashrate
+            'control_to_hash': [nodes['control_params'][0] + node_width/2, nodes['control_params'][1],  # right of control_params
+                               nodes['hashrate'][0] - node_width/2, nodes['hashrate'][1]],  # left of hashrate
+            'hash_to_block': [nodes['hashrate'][0], nodes['hashrate'][1] - node_height/2,  # bottom of hashrate
+                             nodes['block_reward'][0], nodes['block_reward'][1] + node_height/2],  # top of block_reward
+        }
+        
+        # Draw nodes as rectangles with labels
+        for name, (x, y) in nodes.items():
+            if name == 'control_params':
+                label = 'Control Parameters\n(Tau, Gamma)'
+                color = 'lightsalmon'
+            elif name == 'hashrate':
+                label = 'Adjusted Hashrate'
+                color = 'lightblue'
+            elif name == 'block_reward':
+                label = 'Adjusted\nBlock Reward'
+                color = 'gold'
+            
+            flow_ax.add_patch(plt.Rectangle((x-node_width/2, y-node_height/2), node_width, node_height, 
+                                           facecolor=color, edgecolor='black', alpha=0.7))
+            flow_ax.text(x, y, label, ha='center', va='center', fontweight='bold')
+        
+        # Draw arrows connecting nodes
+        arrow_props = dict(arrowstyle='->', connectionstyle='arc3,rad=0.1', 
+                           color='black', lw=2)
+        
+        # Create more elegant arrow styles
+        subtle_arrow = dict(
+            arrowstyle='-|>', 
+            connectionstyle='arc3,rad=0.1',
+            color='red', 
+            lw=1.5,
+            alpha=0.7,
+            linestyle='-'
+        )
+        
+        circular_arrow = dict(
+            arrowstyle='-|>', 
+            connectionstyle='arc3,rad=0.3',
+            color='red', 
+            lw=1.5,
+            alpha=0.7,
+            linestyle='-'
+        )
+        
+        # Block reward to hashrate - use circular arrow connecting to edges
+        flow_ax.annotate('', 
+                        xy=(connection_points['block_to_hash'][2], connection_points['block_to_hash'][3]),  # target point
+                        xytext=(connection_points['block_to_hash'][0], connection_points['block_to_hash'][1]),  # source point
+                        arrowprops=circular_arrow)
+        
+        # Direct arrow from Control Parameters to Network Hashrate
+        flow_ax.annotate('', 
+                        xy=(connection_points['control_to_hash'][2], connection_points['control_to_hash'][3]),  # target point
+                        xytext=(connection_points['control_to_hash'][0], connection_points['control_to_hash'][1]),  # source point
+                        arrowprops=subtle_arrow)
+        
+        # Circular connection from Hashrate back to Block Reward
+        flow_ax.annotate('', 
+                        xy=(connection_points['hash_to_block'][2], connection_points['hash_to_block'][3]),  # target point
+                        xytext=(connection_points['hash_to_block'][0], connection_points['hash_to_block'][1]),  # source point
+                        arrowprops=circular_arrow)
+        
+        # Add a title
+        flow_ax.text(0.5, 0.95, 'Targeted Nakamoto Control Flow', 
+                    ha='center', va='center', fontsize=14, fontweight='bold')
+        
+        # Display the flow chart
+        st.pyplot(flow_fig)
         
         # Display statistics
         with col2:
@@ -517,14 +614,14 @@ if st.session_state.get('run_optimal_sim', False):
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
         
         # Plot hashrate
-        ax1.plot(results['hashrate'], label='Simulated Hashrate', color='blue')
+        ax1.plot(results['hashrate'], label='Adjusted Hashrate', color='blue')
         ax1.plot(hashrate[:time_steps], 
                 label='Actual Hashrate',
                 marker='x',
                 alpha=0.6,
                 linestyle='--',
                 color='red')
-        ax1.set_title('Actual vs Predicted Hashrate with Optimal Parameters')
+        ax1.set_title('Baseline vs Adjusted Hashrate with Optimal Parameters')
         ax1.set_xlabel('Time Steps (days)')
         ax1.set_ylabel('Hashrate')
         ax1.axhline(y=upper_bound, color='r', linestyle='--', label='Upper Bound')

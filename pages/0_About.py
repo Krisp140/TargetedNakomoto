@@ -36,42 +36,44 @@ while adapting to changing market conditions. The estimation equation is based o
 """)
 st.header("Key Formulas")
 
-st.subheader("Original Hashrate Adjustment (with logs)(1)(2)")
+st.subheader("Original Hashrate Adjustment (with logs)")
 st.latex(r"""
 \widehat{N_{t}} = \alpha_1  +  \alpha_2 \widehat{e P_{t}} +  \alpha_3 \widehat{\eta} +  \alpha_4 \widehat{c} +  \alpha_5 \widehat{\Delta \text{T}}
 """)
 st.write("Where:")
 st.markdown("""
-- $N_{t}$ is the predicted hashrate
+- $N_{t}$ is the estimated hashrate from blockchain data. ("Baseline Hashrate")
 - $e$ is the btc/usd exchange rate
 - $\eta$ is the mining efficiency
 - $c$ is the electricity cost
 - $\Delta {T}$ is the deviation in block speed from target block time (10 minutes)
 - $t$ is epoch (2016 blocks)
+- $\widehat{x}$ denotes the log of x.
 """)
 
 st.write("Resultant Prediction:")
-image = Image.open(os.path.join("data", "old_model.png"))
+image = Image.open(os.path.join("static", "Figure_2.png"))
 st.image(image, caption="Original Hashrate Prediction")
-
+st.write("With Alphas:")
+st.latex(r"""
+\alpha_1 = 44.9623\\
+\alpha_2 = 0.4098\\
+\alpha_3 = -1.4882\\
+\alpha_4 = 0.2499\\
+\alpha_5 = 0.0346
+""")
 st.write("However this model has a condition number of 235, indicating potential issues with multicollinearity. Therefore we run a lasso regression and find this:")
 image = Image.open(os.path.join("data", "reg_path.png"))
 st.image(image, caption="Lasso Regression")
 
 st.write("Based on the Lasso results, we remove the electricity and block speed variables from the model.")
 st.write("Resultant Prediction:")
-image = Image.open(os.path.join("data", "new_model.png"))
+image = Image.open(os.path.join("static", "Figure_3.png"))
 st.image(image, caption="New Hashrate Prediction")
 
-st.subheader("New Hashrate Adjustment (with logs)(3)")
+st.subheader("New Hashrate Adjustment (with logs)")
 st.latex(r"""
 \widehat{N_{t}} = \alpha_1  +  \alpha_2 \widehat{e P_{t}} +  \alpha_3 \widehat{\eta}
-""")
-st.write("Where:")
-st.markdown("""
-- $N_{t}$ is the predicted hashrate
-- $e$ is the btc/usd exchange rate
-- $\eta$ is the mining efficiency
 """)
 st.write("And the alphas are:")
 st.latex(r"""
@@ -109,17 +111,6 @@ The simulation evaluates performance using several metrics:
 2. **Time in Bounds**: Percentage of time the hashrate stays within target bounds
 """)
 
-st.header("Data Sources")
-st.markdown("""
-The simulation uses historical Bitcoin network data including:
-
-- Network hashrate (TH/s) (https://bitcoinvisuals.com/)
-- Bitcoin price ($) (https://bitcoinvisuals.com/)
-- Mining efficiency (Th/kWh) (https://ccaf.io/)
-- Electricity costs ($/kWh) (https://www.ercot.com/gridinfo/load/load_hist (Texas))
-- Block speed (s) (https://bitcoinvisuals.com/)
-""")
-
 st.header("Footnotes")
 st.markdown("""
 (1) We tested several different lag structures for the hashrate adjustment model and found that using the current period was the most robust.
@@ -154,7 +145,7 @@ st.markdown("""
 """)
 
 st.markdown("""
-**(3) Regression Results with Selected Features:**
+**(3) Regression Results with Selected Features (OLS LASSO):**
 """)
 
 st.markdown("""
