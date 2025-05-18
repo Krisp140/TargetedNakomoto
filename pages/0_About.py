@@ -19,7 +19,6 @@ div[data-testid="stSidebarNav"] li:first-child {
 """, unsafe_allow_html=True)
 
 # Keep the About heading in the sidebar
-st.sidebar.header("About")
 st.title("About the Hashrate Control Simulation")
 st.markdown("*Created by Kristian Praizner & Daniel Aronoff*")
 st.markdown("**Contact:** [krisp@mit.edu](mailto:krisp@mit.edu) | [daronoff@mit.edu](mailto:daronoff@mit.edu)")
