@@ -91,9 +91,6 @@ class Blockchain:
         T_hat = max(T_STAR /4, min(T_n, 4 *T_STAR))
         D_next = D_n * (T_STAR / T_hat)
         new_epoch.difficulty = D_next
-        #print("\nNEW EPOCH\n")
-        #print(f"Updating difficulty from {D_n} => {D_next}")
-        #print("Median Block Reward: " + str(P_B_median) + '\n')
 
         # Case 1: Hashrate too high - need to decrease rewards
         if self.DT > self.DT_N_UB:
@@ -109,8 +106,6 @@ class Blockchain:
                 if last_epoch.ceil >= self.DT:
                     # Gradually relax the ceiling
                     new_epoch.ceil =  (1+self.gamma) * last_epoch.ceil
-                    #("Old ceiling: " + str(last_epoch.ceil))
-                    #("Ceiling relaxed: " + str(new_epoch.ceil))
                 else:
                     # Remove ceiling if it's no longer needed
                     new_epoch.ceil = None
@@ -120,8 +115,6 @@ class Blockchain:
                 if last_epoch.floor <= self.DT:
                     # Gradually relax the floor
                     new_epoch.ceil = (self.gamma) * last_epoch.floor
-                    #("Old floor: " + str(last_epoch.floor))
-                    #("Floor relaxed: " + str(new_epoch.floor))
                 else:
                     # Remove floor if it's no longer needed
                     new_epoch.floor = None

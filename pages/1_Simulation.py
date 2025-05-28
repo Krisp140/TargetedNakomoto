@@ -87,7 +87,7 @@ title_col, logo_col = st.columns([3, 1])
 # Title and subtitle
 with title_col:
     st.title("Targeted Nakamoto Bitcoin Hashrate Control Simulator")
-    st.markdown("*Created by Kristian Praizner & Daniel Aronoff*")
+    st.markdown("*Created by ANON*")
     st.markdown("A control theory approach to Bitcoin hashrate targeting")
 
 with logo_col:

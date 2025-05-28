@@ -20,8 +20,8 @@ div[data-testid="stSidebarNav"] li:first-child {
 
 # Keep the About heading in the sidebar
 st.title("About the Hashrate Control Simulation")
-st.markdown("*Created by Kristian Praizner & Daniel Aronoff*")
-st.markdown("**Contact:** [krisp@mit.edu](mailto:krisp@mit.edu) | [daronoff@mit.edu](mailto:daronoff@mit.edu)")
+st.markdown("*Created by ANON*")
+st.markdown("**Contact:** [anon@anon.edu](mailto:anon@anon.edu)")
 
 # Add button to navigate to main simulation page
 if st.button("Go to Simulation Page", type="primary"):
