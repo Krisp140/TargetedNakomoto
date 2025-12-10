@@ -158,7 +158,7 @@ python -m pytest tests/
 
 ## Credits
 
-Developed by ANON at ANON.
+Developed by Kristian Praizner and Dan Aronoff at MIT.
 
 ## License
 
